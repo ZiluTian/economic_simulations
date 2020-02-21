@@ -43,7 +43,8 @@ object testItemOnlyExample extends App {
   val cls29: ClassWithObject[Item29] = Item29.reflect(IR)
   val cls30: ClassWithObject[Item30] = Item30.reflect(IR)
   val cls31: ClassWithObject[Item31] = Item31.reflect(IR)
-  val startClasses: List[Clasz[_ <: Actor]] = List(cls1, cls2, cls3, cls4, cls5, cls6, cls7, cls8, cls9, cls10, cls11, cls12, cls13, cls14, cls15, cls16, cls17, cls18, cls19, cls20, cls21, cls22, cls23, cls24, cls25, cls26, cls27, cls28, cls29, cls30, cls31)
+  val clsCust1: ClassWithObject[Customer1] = Customer1.reflect(IR)
+  val startClasses: List[Clasz[_ <: Actor]] = List(cls1, cls2, cls3, cls4, cls5, cls6, cls7, cls8, cls9, cls10, cls11, cls12, cls13, cls14, cls15, cls16, cls17, cls18, cls19, cls20, cls21, cls22, cls23, cls24, cls25, cls26, cls27, cls28, cls29, cls30, cls31, clsCust1)
 
   val lifter = new Lifter()
   val simulationData = lifter(startClasses, mainClass)
