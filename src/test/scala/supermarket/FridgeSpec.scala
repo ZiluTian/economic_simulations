@@ -76,7 +76,7 @@ class FridgeSpec extends FlatSpec with Matchers {
   }
 
   "Consume more items than there are" should "return the amount of items consumed" in {
-    fridge.storage.get(item1_1.name)
+    fridge.storage.get(item1_1.name).get should have size 1
     fridge.consume(item1_1.name, 200) should be (100)
   }
 

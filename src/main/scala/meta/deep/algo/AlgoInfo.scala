@@ -39,7 +39,7 @@ object AlgoInfo {
     Variable[ListBuffer[List[((Int, Int), Int)]]]
 
   /**
-    * This variables is used as a register to store the return value of a call.
+    * This variable is used as a register to store the return value of a call.
     */
   var returnValue: Variable[MutVar[Any]] = Variable[MutVar[Any]]
 
@@ -105,7 +105,7 @@ object AlgoInfo {
   }
 
   /**
-    * Wrapper class for modeling a node id, which can ether be a method id or a position
+    * Wrapper class for modeling a node id, which can either be a method id or a position
     */
   abstract class CodeNode {
     def getId: String
@@ -154,7 +154,7 @@ object AlgoInfo {
   }
 
   /**
-    * Models an edge between to nodes
+    * Models an edge between two nodes
     *
     * @param label          a random name, which is displayed when drawing the graph
     * @param from           start node

@@ -29,8 +29,8 @@ class Passenger() extends Actor{
 
 
       val rnd = new scala.util.Random
-      val r = rnd.nextInt(3)
-      if (r == 1 || r == 3){
+      val r = rnd.nextInt(100)
+      if (r % 3 == 1){
         wait_to_cross()
       }
       SpecialInstructions.waitTurns(1)

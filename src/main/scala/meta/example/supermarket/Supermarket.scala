@@ -46,7 +46,7 @@ class Supermarket extends SummaryTrait {
     var soldItem: Item = null
     if (fifo) {
       soldItem = requested.popLeft
-    } else {
+    } else { //soldItem might be already expired.
       soldItem = requested.popRight
     }
 

@@ -4,7 +4,7 @@ import org.scalatest._
 
 import scala.collection.mutable
 
-class ItemSpec extends FlatSpec with Matchers {
+class  ItemSpec extends FlatSpec with Matchers {
   val item1 = new Item1
 
   "Age of new item" should "be 0" in {

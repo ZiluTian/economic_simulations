@@ -4,7 +4,7 @@ import meta.deep.IR.Predef._
 
 /**
   * This class is an abstract class used to represent different program fragments of a lifted class
-  * It implements a codegen method, which has to be implemented to generated new code of the algorithm.
+  * It implements a codegen method, which has to be implemented to generate new code of the algorithm.
   *
   * @param tpe type of return value
   * @tparam A return value of Algo

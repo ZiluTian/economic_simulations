@@ -16,7 +16,7 @@ class MainInit {
     val l = ListBuffer[Actor]()
     val l_repeat = ListBuffer[Actor]()
 
-    (1 to 5).foreach(_ => l_repeat.append(new Customer1))
+    (1 to 12).foreach(_ => l_repeat.append(new Customer1))
     l ++= l_repeat
     l_repeat.clear()
 

@@ -4,7 +4,7 @@
 //import meta.deep.runtime.{Actor, Message}
 //import meta.example.supermarket.Supermarket
 //import meta.example.supermarket.goods.{Item, newItem, newItemsMap}
-//import com.typesafe.scalalogging.Logger
+////import com.typesafe.scalalogging.Logger
 //import org.apache.log4j.BasicConfigurator
 //
 //import scala.collection.mutable.ListBuffer
@@ -15,14 +15,14 @@
 //  var messages: List[Message] = List()
 //  var timer: Int = 0
 //  var until: Int = 10
-//  val shelfCapacity: Int = 1
+//  val shelfCapacity: Int = 30
 //  val unitLoad: Int = 5 //
 //
 //  //  val memUnit: Int = 1024 // KB
 //  //  val runtime = Runtime.getRuntime
 //
 //  BasicConfigurator.configure()
-//  val logger = Logger("Root")
+////  val logger = Logger("Root")
 //
 //  def init(): Unit = {
 //    actors = generated.InitData.initActors.to[Array]

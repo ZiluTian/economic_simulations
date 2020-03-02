@@ -18,7 +18,7 @@ trait SummaryTrait {
       case _ => throw new Exception
     }
     println(Console.RESET + Console.RED + "Wasted Amount " + wasteSummary.formatted(
-      s"Vegetable: ${to2Dec(wasteSummary.Vegetable)} " +
+      s"Vegetable: ${to2Dec(wasteSummary.Vegetable)} " +          //string interpolation
         s"Meat: ${to2Dec(wasteSummary.Meat)} " +
         s"Snack: ${to2Dec(wasteSummary.Snack)} " +
         s"Grain: ${to2Dec(wasteSummary.Grain)} "+
