@@ -6,19 +6,19 @@ import squid.quasi.lift
 
 
 @lift
-class Passenger() extends Actor{
+class Person() extends Actor{
 
   var trafficLight: TrafficLight = null
 
   def wait_to_cross():Unit = {
     if(trafficLight.state == 0){
-      println("passenger asks to cross the road!")
+      println("The person asks to cross the road!")
       trafficLight.toggle()
-      println("Passenger is crossing the road")
+      println("The person is crossing the road")
       //      SpecialInstructions.waitTurns(1)
     }
     else{
-      println("Passenger is crossing the road")
+      println("The person is crossing the road")
     }
   }
 
