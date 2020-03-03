@@ -11,7 +11,7 @@ class MainInit {
     val l = ListBuffer[Actor  ]()
 
     val trafficLight: TrafficLight = new TrafficLight()
-    val passenger: Passenger = new Passenger()
+    val passenger: Person = new Person()
     val driver: Driver = new Driver()
     passenger.trafficLight = trafficLight
     driver.trafficLight = trafficLight
