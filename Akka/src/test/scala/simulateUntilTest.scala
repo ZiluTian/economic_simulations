@@ -11,7 +11,8 @@ class simulateUntilTest extends FlatSpec {
     
     f"The epidemics example" should "stop as soon as the termination condition is met" in {
       val population = 10000
-      val agents = generated.example.epidemic.InitData(population, 0.01)
+      val graph = cloudcity.lib.Graph.ErdosRenyiGraph(population, 0.01)
+      val agents = generated.example.epidemic.InitData(graph)
       (new API.SimulateUntil()).apply(agents, totalRounds, (ts: Iterable[Iterable[Serializable]]) => {
         val x = ts.last.filter(i => i match {
           case y: generated.example.epidemic.Person => y.health == 1
