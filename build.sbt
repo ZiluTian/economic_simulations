@@ -17,6 +17,14 @@ run / fork := true
 
 val pubLocal = Option(System.getProperty("pubLocal")).getOrElse("false")
 
+initialize := {
+  val _ = initialize.value // run the previous initialization
+  val java8 = "1.8"
+  val java11 = "11"
+  val current  = sys.props("java.specification.version")
+  assert(current == java8 || current == java11, s"Unsupported JDK: java.specification.version $current != $java8 or $java11")
+}
+
 lazy val commonSettings = Seq(
   libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
   libraryDependencies += "org.scalanlp" %% "breeze" % breezeVersion,
