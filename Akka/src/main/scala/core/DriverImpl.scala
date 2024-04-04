@@ -129,7 +129,11 @@ class Driver {
 
                 case LogControllerFinished() =>
                     Behaviors.stopped {() => 
-                        ctx.log.info(f"Average ${(end-initialStart)/(currentTurn-1)} ms")
+                        if (currentTurn > 1) {
+                            ctx.log.info(f"Average ${(end-initialStart)/(currentTurn)} ms")
+                        } else {
+                            ctx.log.info(f"Average ${end-initialStart} ms")
+                        }
                         ctx.log.debug(f"Simulation completes! Stop the driver")
                         workersStop.foreach(a => a ! WorkerSpec.Stop())
                     }
