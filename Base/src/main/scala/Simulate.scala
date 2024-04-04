@@ -48,7 +48,11 @@ object Simulate {
         end = System.currentTimeMillis()
         println(f"Round ${currentRound} takes ${end-start} ms")
       }
-      println(f"Average ${(end - initial)/totalRound} ms")
+      if (totalRound >= 1) {
+        println(f"Average ${(end - initial)/totalRound} ms")
+      } else {
+        println(f"Average ${end - initial} ms")
+      }
       SimulationSnapshot(actors, collectedMessages.flatMap(i => i._2).toList)
     }
 }
