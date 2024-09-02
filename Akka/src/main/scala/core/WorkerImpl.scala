@@ -36,9 +36,8 @@ class Worker {
 
     private var completedAgents: Long = 0
     private var registeredWorkers: AtomicInteger = new AtomicInteger(0)
-    private val logControllerEnabled = simulation.akka.API.OptimizationConfig.logControllerEnabled
 
-    def apply(id: Int, sims: Seq[Actor], totalWorkers: Int): Behavior[WorkerEvent] = Behaviors.setup { ctx =>
+    def apply(id: Int, sims: Seq[Actor], totalWorkers: Int, logControllerEnabled: Boolean): Behavior[WorkerEvent] = Behaviors.setup { ctx =>
         localSims = sims.map(x => (x.id, x)).toMap
         totalAgents = sims.size
         this.totalWorkers = totalWorkers
@@ -80,15 +79,15 @@ class Worker {
         if (logControllerEnabled) {
             ctx.system.receptionist ! Receptionist.Subscribe(LogControllerSpec.LoggerAggregateServiceKey, workerSub)
         }
-        worker()
+        worker(logControllerEnabled)
     }
 
     // Consider replacing receivedWorkers with a total workers
-    private def worker(): Behavior[WorkerEvent] =
+    private def worker(logControllerEnabled: Boolean): Behavior[WorkerEvent] =
         Behaviors.receive[WorkerEvent] { (ctx, message) =>
             message match {
                 case Prepare() => 
-                    worker()
+                    worker(logControllerEnabled)
 
                 case ReceiveAgentMap(wid, nameIds, reply) => 
                     peerWorkers.computeIfAbsent(wid, x => {
@@ -129,7 +128,7 @@ class Worker {
                     if (receivedWorkers.keys().size == totalWorkers-1){
                         ctx.self ! RoundStart()
                     }
-                    worker()
+                    worker(logControllerEnabled)
                 
                 case RoundStart() =>
                     ctx.log.debug(f"Worker ${workerId} starts! Received from ${receivedWorkers.keys().toSet}")
@@ -170,7 +169,7 @@ class Worker {
                         })
                     } 
                     ctx.self ! AgentsCompleted()
-                    worker()
+                    worker(logControllerEnabled)
 
                 case ExpectedReceives(replyTo, acceptedInterval, availability) => 
                     // send out messages to other workers only at the beginning of a round to avoid race condition
@@ -188,7 +187,7 @@ class Worker {
                     if (receivedWorkers.keys().size == totalWorkers-1){
                         ctx.self ! RoundStart()
                     } 
-                    worker()
+                    worker(logControllerEnabled)
                     
                 case AgentsCompleted() =>
                     end = System.currentTimeMillis()

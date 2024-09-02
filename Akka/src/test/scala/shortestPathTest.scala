@@ -3,6 +3,7 @@ package test
 
 import org.scalatest.FlatSpec
 import simulation.akka.API._
+import meta.API.{SimulationData, Timeseries}
 
 class shortestPath extends FlatSpec {
     val totalVertices: Int = 50
@@ -23,10 +24,12 @@ class shortestPath extends FlatSpec {
 
     f"The single source shortest path algorithm over a linked list with ${totalVertices} vertices, sequential workers" should f"update the distance of all vertices in ${totalVertices} rounds" in {
         val agents = generated.core.test.shortestPath.InitData()
-        API.OptimizationConfig.logControllerEnabled = true
         API.OptimizationConfig.timeseriesSchema = ShortestPathTimeseries
-        val snapshot1 = API.Simulate(agents, totalRounds)
-        // assert(snapshot1.sims.map(i => i.asInstanceOf[generated.core.test.shortestPath.Vertex].dist).toSet == Range(0, totalVertices).toSet)
-        API.Simulate.timeseries.foreach(t => { println(t) })
+        val conf = Map("role" -> "Standalone", 
+            "port" -> 25300, 
+            "name" -> "ShortestPath", 
+            "data" -> "timeseries")
+        val ts = API.Simulate(agents, totalRounds, conf)
+        ts.timeseries.foreach(t => { println(t) })
     }
 }
