@@ -7,8 +7,6 @@ case object MergedWorker extends Optimization
 object OptimizationConfig {
     var conf: Optimization = MergedWorker
 
-    var timeseriesSchema: SimulationTimeseries = FullTimeseries
-
     // todo: tmp, fix with proper availability input
     var availability: Int = 1
 

@@ -1,6 +1,6 @@
 package simulation.akka.core
 
-import meta.API.SimulationDataBuilder
+import meta.API.TimeseriesBuilder
 import java.util.concurrent.{ConcurrentHashMap}
 import akka.actor.typed.receptionist.{Receptionist}
 import java.util.concurrent.atomic.AtomicInteger
@@ -29,7 +29,7 @@ class LogController {
     var interruptDriver: Set[ActorRef[DriverSpec.InterruptDriver]] = Set()
     var haltCond: Iterable[Iterable[Serializable]] => Boolean = null
 
-    def apply(workers: Int, builder: SimulationDataBuilder): Behavior[LogControllerEvent] = Behaviors.setup {ctx =>
+    def apply(workers: Int, builder: TimeseriesBuilder): Behavior[LogControllerEvent] = Behaviors.setup {ctx =>
         totalWorkers = workers
         // Let workers and driver discover the log controller
         ctx.system.receptionist ! Receptionist.Register(LoggerAggregateServiceKey, ctx.self)
@@ -37,7 +37,7 @@ class LogController {
         logController(builder)
     }
 
-    def apply(workers: Int, haltCond: Iterable[Iterable[Serializable]] => Boolean, builder: SimulationDataBuilder): Behavior[LogControllerEvent] = Behaviors.setup {ctx =>
+    def apply(workers: Int, haltCond: Iterable[Iterable[Serializable]] => Boolean, builder: TimeseriesBuilder): Behavior[LogControllerEvent] = Behaviors.setup {ctx =>
         totalWorkers = workers
         this.haltCond = haltCond
         // Let workers and driver discover the log controller
@@ -57,7 +57,7 @@ class LogController {
         logControllerWithInterrupt(builder)
     }
 
-    def logController(builder: SimulationDataBuilder): Behavior[LogControllerEvent] = 
+    def logController(builder: TimeseriesBuilder): Behavior[LogControllerEvent] = 
         Behaviors.receive[LogControllerEvent] { (ctx, message) => 
             message match { 
                 case AggregateLog(wid, time, agents) =>
@@ -66,7 +66,7 @@ class LogController {
                     }).put(wid, agents)
                     if (indexedTimeseries.get(time).size == totalWorkers) {
                         reducedTimeseries.computeIfAbsent(time, x => {
-                            simulation.akka.API.OptimizationConfig.timeseriesSchema.reducer(indexedTimeseries.remove(time).toSeq.map(_._2))
+                            builder.strategy.reducer(indexedTimeseries.remove(time).toSeq.map(_._2))
                         })
                     }
                     Behaviors.same
@@ -89,7 +89,7 @@ class LogController {
             }
         }
 
-    def logControllerWithInterrupt(builder: SimulationDataBuilder): Behavior[LogControllerEvent] = 
+    def logControllerWithInterrupt(builder: TimeseriesBuilder): Behavior[LogControllerEvent] = 
         Behaviors.receive[LogControllerEvent] { (ctx, message) => 
             message match { 
                 case RegisterDriverInterrupt() =>

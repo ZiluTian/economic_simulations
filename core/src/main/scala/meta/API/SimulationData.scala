@@ -2,7 +2,7 @@ package meta.API
 
 import meta.runtime.{Actor, Message}
 import scala.collection.mutable.Buffer
-
+ 
 // The distinction is for performance
 sealed trait SimulationData {
   def sims: Traversable[Actor] = ???
@@ -37,9 +37,9 @@ sealed class SnapshotBuilder extends SimulationDataBuilder {
   }
 }
 
-sealed class TimeseriesBuilder extends SimulationDataBuilder {
+sealed class TimeseriesBuilder(val strategy: DeforestationStrategy) extends SimulationDataBuilder {
   private var timeseries: Iterable[Iterable[Serializable]] = Iterable.empty
-  
+
   override def addTimeseries(ts: Iterable[Iterable[Serializable]]): Unit = {
     timeseries = timeseries ++ ts
   }

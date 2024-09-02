@@ -1,14 +1,14 @@
 package simulation.akka.API
 
 import com.typesafe.config.ConfigFactory
-import meta.API.{SimulationData, SimulationDataBuilder, SnapshotBuilder, TimeseriesBuilder}
+import meta.API.{DeforestationStrategy, SimulationData, SimulationDataBuilder, SnapshotBuilder, TimeseriesBuilder}
 import meta.runtime.{Actor, Message}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import akka.actor.typed.ActorSystem
 
 object Simulate {
-    def apply(actors: IndexedSeq[Actor], totalTurn: Long, conf: Map[String, Any], cond: Option[Iterable[Iterable[Serializable]] => Boolean] = None): SimulationData = {
+    def apply(actors: IndexedSeq[Actor], totalTurn: Long, conf: Map[String, Any], cond: Option[Iterable[Iterable[Serializable]] => Boolean] = None)(implicit schema: DeforestationStrategy): SimulationData = {
 
         require(conf.isDefinedAt("role"))   // Standalone, Driver, Machine-$id
         require(conf.isDefinedAt("port"))   // network port
@@ -33,7 +33,7 @@ object Simulate {
 
         val machinePrefix = "Machine-" 
         val builder: SimulationDataBuilder = if (dataConf == "timeseries") {
-            new TimeseriesBuilder()
+            new TimeseriesBuilder(schema)
         } else {
             new SnapshotBuilder()
         }

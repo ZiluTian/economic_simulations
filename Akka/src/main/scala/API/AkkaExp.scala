@@ -2,7 +2,7 @@ package simulation.akka.API
 
 import akka.cluster.typed.Cluster
 import meta.runtime.Actor
-import meta.API.{SimulationDataBuilder, TimeseriesBuilder}
+import meta.API.{SimulationDataBuilder, TimeseriesBuilder, SnapshotBuilder}
 import com.typesafe.config.ConfigFactory
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 import scala.collection.JavaConversions._
@@ -67,7 +67,7 @@ object AkkaExp {
             ctx.log.debug(f"${actorsPerWorker} actors per worker")
 
             val logControllerOn = haltCond.isDefined || builder.isInstanceOf[TimeseriesBuilder]
-
+            
             // Worker id is 0-indexed
             if (roles.exists(p => p.startsWith("Worker"))) {
                 ctx.log.debug(f"Creating a worker!")
@@ -136,16 +136,23 @@ object AkkaExp {
                 case SpawnLogController(totalWorkers) => 
                     val logController = if (haltCond.isDefined) {
                         // ctx.log.info("Conditional termination is defined!")
-                        ctx.spawn((new simulation.akka.core.LogController).apply(totalWorkers, haltCond.get, builder), "logController")
+                        ctx.spawn((new simulation.akka.core.LogController).apply(totalWorkers, haltCond.get, builder.asInstanceOf[TimeseriesBuilder]), "logController")
                     } else {
                         // ctx.log.info("Conditional termination is nto defined!")
-                        ctx.spawn((new simulation.akka.core.LogController).apply(totalWorkers, builder), "logController")
+                        ctx.spawn((new simulation.akka.core.LogController).apply(totalWorkers, builder.asInstanceOf[TimeseriesBuilder]), "logController")
                     }
                     ctx.watchWith(logController, LogControllerStopped())
                     Behaviors.same
 
                 case SpawnWorker(workerId, agents, totalWorkers, logControllerOn) =>
-                    val sim = ctx.spawn((new simulation.akka.core.Worker).apply(workerId, agents, totalWorkers, logControllerOn), f"worker${workerId}")
+                    val sim = builder match {
+                        case x: TimeseriesBuilder => {
+                            ctx.spawn((new simulation.akka.core.Worker).apply(workerId, agents,  totalWorkers, Some(x.asInstanceOf[TimeseriesBuilder])), f"worker${workerId}")
+                        }
+                        case _: SnapshotBuilder => {
+                            ctx.spawn((new simulation.akka.core.Worker).apply(workerId, agents,  totalWorkers, None), f"worker${workerId}")
+                        }
+                    }
                     activeWorkers.add(workerId)
                     ctx.watchWith(sim, WorkerStopped(workerId, agents))
                     Behaviors.same
