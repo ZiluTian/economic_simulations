@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 import akka.actor.typed.ActorSystem
 
 object Simulate {
-    def apply(actors: IndexedSeq[Actor], totalTurn: Long, conf: Map[String, Any], cond: Option[Iterable[Iterable[Serializable]] => Boolean] = None)(implicit schema: DeforestationStrategy): SimulationData = {
+    def apply(actors: IndexedSeq[Actor], totalTurn: Long, conf: Map[String, Any], cond: Option[Iterable[Iterable[Serializable]] => Boolean] = None)(implicit strategy: DeforestationStrategy): SimulationData = {
 
         require(conf.isDefinedAt("role"))   // Standalone, Driver, Machine-$id
         require(conf.isDefinedAt("port"))   // network port
@@ -33,7 +33,7 @@ object Simulate {
 
         val machinePrefix = "Machine-" 
         val builder: SimulationDataBuilder = if (dataConf == "timeseries") {
-            new TimeseriesBuilder(schema)
+            new TimeseriesBuilder(strategy)
         } else {
             new SnapshotBuilder()
         }

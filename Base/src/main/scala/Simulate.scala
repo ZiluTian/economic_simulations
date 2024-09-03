@@ -14,6 +14,7 @@ object Simulate {
   }
 
   // SimulateUntil
+  // todo
   def withUntilCondition(agents: IndexedSeq[Actor], totalRound: Long, cond: Iterable[Iterable[Serializable]] => Boolean)(implicit strategy: DeforestationStrategy): SimulationData = {
     new Simulate(agents, totalRound, Map("name" -> f"Simulation_${r_seed.nextInt()}", "data" -> "timeseries"), Some(cond)).run(strategy)
   }
@@ -65,6 +66,12 @@ class Simulate(agents: IndexedSeq[Actor], totalRound: Long, conf: Map[String, An
           proposed
         }).min
 
+        builder match {
+          case x: TimeseriesBuilder => 
+              builder.addTimeseries(Vector(strategy.transformer(actors.map(a => strategy.mapper(a.SimClone())))))
+          case _ => 
+        }
+
         actors.filterNot(_.deleted).foreach(a => {
           a.receivedMessages ++= collectedMessages.getOrElse(a.id, Buffer())
           a.receivedSerializedMessages ++= collectedSerializedMessages.getOrElse(a.id, Buffer())
@@ -76,13 +83,20 @@ class Simulate(agents: IndexedSeq[Actor], totalRound: Long, conf: Map[String, An
         end = System.currentTimeMillis()
         println(f"Round ${currentRound} takes ${end-start} ms")
       }
+      
       if (totalRound >= 1) {
         println(f"Average ${(end - initial)/totalRound} ms")
       } else {
         println(f"Average ${end - initial} ms")
       }
-      builder.addAgents(actors)
-      builder.addMessages(collectedMessages.flatMap(i => i._2).toVector)
+
+      builder match {
+        case x: SnapshotBuilder => 
+          builder.addAgents(actors)
+          builder.addMessages(collectedMessages.flatMap(i => i._2).toVector)
+        case _ => 
+      }
+
       // SimulationSnapshot(actors, collectedMessages.flatMap(i => i._2).toList)
       builder.build()
     }
