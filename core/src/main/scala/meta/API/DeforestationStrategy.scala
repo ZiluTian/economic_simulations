@@ -6,7 +6,7 @@ abstract class DeforestationStrategy {
 }
 
 object DeforestationStrategy {
-  object NoReduction extends DeforestationStrategy {
+  implicit object NoReduction extends DeforestationStrategy {
     // a sequential worker applies the mapper to each agent
     override def mapper(x: Serializable): Serializable = {
       x
