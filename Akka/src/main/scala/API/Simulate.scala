@@ -49,7 +49,7 @@ object Simulate {
                     akka.cluster.roles = [$role]
                     akka.cluster.seed-nodes = ["akka://$name@localhost:$port"]
                     """).withFallback(ConfigFactory.load("application"))
-                ActorSystem(AkkaExp(totalTurn, workersPerMachine, builder, actors, cond), name, config)
+                ActorSystem(AkkaExp(totalTurn, totalWorkers, builder, actors, cond), name, config)
             }
             case "Driver" => {
                 require(conf.isDefinedAt("ip"))
