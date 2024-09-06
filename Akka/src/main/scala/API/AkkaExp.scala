@@ -59,31 +59,21 @@ object AkkaExp {
             val roles: Set[String] = cluster.selfMember.getRoles.toSet
             val totalActors = actors.size
             var actorsPerWorker = totalActors/totalWorkers
+            val logControllerOn = haltCond.isDefined || builder.isInstanceOf[TimeseriesBuilder]
 
             stoppedWorkers.clear()
             activeWorkers.clear()
             finalAgents.clear()
             
-            ctx.log.debug(f"${actorsPerWorker} actors per worker")
-
-            val logControllerOn = haltCond.isDefined || builder.isInstanceOf[TimeseriesBuilder]
-            
-            // Worker id is 0-indexed
-            if (roles.exists(p => p.startsWith("Worker"))) {
-                ctx.log.debug(f"Creating a worker!")
-                val wid = roles.head.split("-").last.toInt
-                val containedAgents = if (wid == totalWorkers-1){
-                    actors.slice(wid*actorsPerWorker, totalActors)    
-                } else {
-                    actors.slice(wid*actorsPerWorker, (wid+1)*actorsPerWorker)  
-                }
-                ctx.self ! SpawnWorker(wid, containedAgents, totalWorkers, logControllerOn)
-            } 
+            ctx.log.debug(f"Total actors: ${totalActors}")
+            ctx.log.debug(f"Total workers: ${totalWorkers}")
+            ctx.log.debug(f"Log controller is on: ${logControllerOn}")
+            ctx.log.debug(f"Actors per worker: ${actorsPerWorker}")           
 
             // Machine id is 0-indexed
             if (roles.exists(p => p.startsWith("Machine"))) {
                 val mid = roles.head.split("-").last.toInt
-                ctx.log.debug(f"Creating machine ${mid}!")
+                ctx.log.debug(f"Creating worker machine ${mid}")
                 val workersPerMachine: Int = ConfigFactory.load("driver-worker").getValue("driver-worker.workers-per-machine").render().toInt
                 for (i <- Range(0, workersPerMachine)) {
                     val wid = mid * workersPerMachine + i
@@ -97,10 +87,11 @@ object AkkaExp {
             } 
             
             if (cluster.selfMember.hasRole("Driver")) {
-                ctx.log.debug(f"Creating a driver!")
+                ctx.log.debug(f"Creating driver")
                 ctx.self ! SpawnDriver(totalWorkers, totalTurn, logControllerOn)
                 // Co-locate the log controller with driver
                 if (logControllerOn) {
+                    ctx.log.debug(f"Creating log controller")
                     ctx.self ! SpawnLogController(totalWorkers)
                 }
             } 
