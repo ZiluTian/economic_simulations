@@ -62,8 +62,8 @@ class Worker {
                 Prepare()
 
             case LogControllerSpec.LoggerAggregateServiceKey.Listing(logger) =>
-                ctx.log.debug(f"Log controller registered!")
                 if (logger.size == 1) {
+                    ctx.log.debug(f"Log controller registered!")
                     loggerRef = logger.head
                 }
                 Prepare()
@@ -88,7 +88,7 @@ class Worker {
         Behaviors.receive[WorkerEvent] { (ctx, message) =>
             message match {
                 case Prepare() => 
-                    worker(builder)
+                    Behaviors.same
 
                 case ReceiveAgentMap(wid, nameIds, reply) => 
                     peerWorkers.computeIfAbsent(wid, x => {
