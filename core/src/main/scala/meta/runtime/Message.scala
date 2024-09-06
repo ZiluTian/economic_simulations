@@ -6,25 +6,34 @@ import com.fasterxml.jackson.annotation.{JsonTypeInfo, JsonSubTypes, JsonTypeNam
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
   Array(
+    new JsonSubTypes.Type(value=classOf[IntMessage], name = "intMessage"),
+    new JsonSubTypes.Type(value=classOf[DoubleMessage], name = "doubleMessage"),
     new JsonSubTypes.Type(value = classOf[DoubleArrayMessage], name = "doubleArrayMessage"),
-    new JsonSubTypes.Type(value = classOf[TimedMessage], name = "timedMessage")))
-class Message extends JsonSerializable {
-  var value: Double = 0
+    new JsonSubTypes.Type(value=classOf[RequestMessage], name = "requestMessage"),
+    new JsonSubTypes.Type(value=classOf[ResponseMessage], name = "responseMessage")))
+trait Message extends JsonSerializable {
+  def value: Any
 }
+
+@JsonTypeName("intMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class IntMessage(value: Int) extends Message
+
+@JsonTypeName("doubleMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class DoubleMessage(value: Double) extends Message
+
 
 @JsonTypeName("doubleArrayMessage")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-class DoubleArrayMessage(size: Int) extends Message {
-  var doubleArrayValue: Array[Double] = new Array[Double](size)
-}
+case class DoubleArrayMessage(value: Array[Double]) extends Message
 
-@JsonTypeName("timedMessage")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
   Array(
-    new JsonSubTypes.Type(value = classOf[RequestMessage], name = "requestMessage"),
-    new JsonSubTypes.Type(value = classOf[ResponseMessage], name = "responseMessage")))
-class TimedMessage extends Message {
+    new JsonSubTypes.Type(value=classOf[RequestMessage], name = "requestMessage"),
+    new JsonSubTypes.Type(value=classOf[ResponseMessage], name = "responseMessage")))
+trait Timed extends JsonSerializable {
   var send_time: Long = 0
   var latency: Int = 1  // the allowed delay of the message
 }
@@ -38,11 +47,12 @@ class TimedMessage extends Message {
   * @param argss the arguments of the method
   */
 @JsonTypeName("requestMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 case class RequestMessage(senderId: AgentId,
                           sessionId: Option[String],
                           methodInfo: String,
-                          argss: List[List[Any]])
-    extends TimedMessage
+                          value: List[List[Any]])
+    extends Message with Timed 
 
 /**
   * This class is used to answer to a received message.
@@ -50,5 +60,6 @@ case class RequestMessage(senderId: AgentId,
   * @param sessionId the same as that of the request
   */
 @JsonTypeName("responseMessage")
-case class ResponseMessage(arg: Any, sessionId: String)
-    extends TimedMessage
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class ResponseMessage(value: Any, sessionId: String)
+    extends Message with Timed

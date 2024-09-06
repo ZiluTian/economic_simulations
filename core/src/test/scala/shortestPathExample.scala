@@ -4,7 +4,7 @@ package shortestPath
 import squid.quasi.lift
 import meta.deep.IR.TopLevel.ClassWithObject
 import meta.deep.IR
-import meta.runtime.{Actor, Message}
+import meta.runtime.{Actor, IntMessage, Message}
 import meta.API._
 import org.scalatest.FlatSpec
 import meta.classLifting.SpecialInstructions
@@ -23,15 +23,14 @@ class Vertex() extends Actor {
         while (true) {
             received = receiveMessage()
             while (received!=None){
-                if (received.get.value < dist){
-                    dist = received.get.value.toInt + 1
+                if (received.get.value.asInstanceOf[Int] < dist){
+                    dist = received.get.value.asInstanceOf[Int] + 1
                 }
                 received = receiveMessage()
             }
 
             connectedAgents.foreach(a => {
-                val msg = new Message()
-                msg.value = dist.toDouble
+                val msg = IntMessage(dist)
                 sendMessage(a.id, msg)
             })
             // println(id + " distance to source is " + dist + " at round " + time)

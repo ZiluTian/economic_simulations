@@ -13,7 +13,7 @@ class GoLTileTest extends FlatSpec {
     // case class TileCoordinate(x: Coordinate2D, y: Coordinate2D) extends Coordinate
 
     trait ComponentMessage extends Message
-    class Boolean2DArrayMessage(val content: Iterable[Boolean], val cid: (Coordinate2D, Coordinate2D)) extends ComponentMessage
+    class Boolean2DArrayMessage(val value: Iterable[Boolean], val cid: (Coordinate2D, Coordinate2D)) extends ComponentMessage
 
     trait Component[T, C] {
         // def topo(c: C): Iterable[C] = ???
@@ -75,9 +75,9 @@ class GoLTileTest extends FlatSpec {
                     x.cid match {
                         case (Coordinate2D(x1, y1), Coordinate2D(x2, y2)) if (y1 == cid._1.y && y2 == cid._2.y) =>                         
                             if (x1 > cid._2.x) {
-                                x.content.copyToArray(oldBoard(rows-1))
+                                x.value.copyToArray(oldBoard(rows-1))
                             } else {
-                                x.content.copyToArray(oldBoard(0))
+                                x.value.copyToArray(oldBoard(0))
                             }
                         case _ =>
                             throw new Exception("Boolean 2d array, unsupported messages!")

@@ -183,7 +183,7 @@ class CreateCode(initCode: String,
     val messages = scheduledRPCRequests.remove(time)
     if (messages.isDefined){
       for (m <- messages.get){
-        val args = m.argss.flatten
+        val args = m.value.flatten
         val response = m.methodInfo match {
           ${methodCases.split("\n").mkString("\n" + " "*4)}
         }
