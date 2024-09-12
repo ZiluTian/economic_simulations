@@ -79,8 +79,8 @@ class ERMStatefulTest extends BSPBenchSuite {
         List(1000, 10000, 100000).foreach(population => {
             writer.write(f"Config: population ${population} rounds ${totalRounds}\n")
 
-            val g: Map[Long, Iterable[Long]] = (new ErdosRenyiGraph(population, connectivity)).g
-            val agents = g.map(i => new PersonAgent(i._1, if (Random.nextInt(100)==0) 0 else 2, i._2.toSeq))
+            val graph = GraphFactory.erdosRenyi(population, connectivity).adjacencyList()
+            val agents = toGraphInt(graph).map(i => new PersonAgent(i._1, if (Random.nextInt(100)==0) 0 else 2, i._2.toSeq))
 
             // binding information (partition structure)
             val initPartition = new Partition {
@@ -91,7 +91,7 @@ class ERMStatefulTest extends BSPBenchSuite {
 
                 val topo = new BSPModel.Graph[BSPId]{
                     val vertices = agents.map(a => a.id).toSet
-                    val edges = g.map(i => (i._1, i._2.toList))
+                    val edges = graph
                     val inEdges = Map()
                     val outEdges = Map()
                 }

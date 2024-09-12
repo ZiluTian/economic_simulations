@@ -22,8 +22,8 @@ class handOptSBMTest extends BSPBenchSuite {
         List(1000, 10000, 100000).foreach(population => {
             writer.write(f"Config: population ${population} rounds ${totalRounds}\n")
 
-            val graph: Map[Int, Iterable[Int]] = (new SBMGraph(population, connectivity, 0, 5)).g.map(i => (i._1.toInt, i._2.map(j => j.toInt)))
-            var readOnly: Array[Person] = (0 to population-1).map(i => {
+            val graph = toGraphInt(GraphFactory.stochasticBlock(population, connectivity, 0, 5).adjacencyList())
+            var readOnly: Array[Person] = (0 until population).map(i => {
                 val age: Int = Random.nextInt(90)+10
                 Person(age, 
                     graph.getOrElse(i, List()), 

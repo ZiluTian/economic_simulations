@@ -1,6 +1,6 @@
 package object BSPModel {
-    type BSPId = Long
-    type PartitionId = Long
+    type BSPId = Int
+    type PartitionId = Int
 
     // def debug(msg: () => String) = {
     //     println(f"Debug: ${msg()}")
@@ -10,9 +10,9 @@ package object BSPModel {
         pid
     }
 
-    private var lastId: Long = 0
+    private var lastId: BSPId = 0
 
-    def getNextId(): Long = this.synchronized {
+    def getNextId(): BSPId = this.synchronized {
         lastId = lastId + 1
         lastId
     }

@@ -80,8 +80,8 @@ class ERMTest extends BSPBenchSuite {
     }
 
     test(f"${experimentName} example should run") {
-        val g: Map[Long, Iterable[Long]] = (new ErdosRenyiGraph(population, connectivity)).g
-        val agents = g.map(i => new PersonAgent(i._1, i._2.toSeq))
+        val graph = GraphFactory.erdosRenyi(population, connectivity).adjacencyList()
+        val agents = toGraphInt(graph).map(i => new PersonAgent(i._1, i._2.toSeq))
 
         // binding information (partition structure)
         val initPartition = new Partition {
@@ -92,7 +92,7 @@ class ERMTest extends BSPBenchSuite {
 
             val topo = new BSPModel.Graph[BSPId]{
                 val vertices = agents.map(a => a.id).toSet
-                val edges = g.map(i => (i._1, i._2.toList))
+                val edges = graph.map(i => (i._1, i._2.toList))
                 val inEdges = Map()
                 val outEdges = Map()
             }

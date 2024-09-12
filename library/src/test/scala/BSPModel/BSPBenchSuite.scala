@@ -9,6 +9,23 @@ trait BSPBenchSuite extends AnyFunSuite {
     val totalRounds: Int 
     val experimentName: String
 
+    implicit def toVectorGraphLong(g: Map[Long, Iterable[Long]]): Map[Long, Vector[Long]] = {
+        g.map(i => (i._1, i._2.toVector))
+    } 
+
+    implicit def toVectorGraphInt(g: Map[Long, Iterable[Long]]): Map[Int, Vector[Int]] = {
+        g.map(i => (i._1.toInt, i._2.map(_.toInt).toVector))
+    } 
+
+    implicit def toGraphInt(g: Map[Long, Iterable[Long]]): Map[Int, Iterable[Int]] = {
+        g.map(i => (i._1.toInt, i._2.map(_.toInt)))
+    } 
+
+    implicit def toVertexSetInt(g: Iterable[Long]): Set[Int] = g.map(_.toInt).toSet
+    implicit def toVertexSetLong(g: Iterable[Long]): Set[Long] = g.toSet
+    implicit def toEdgeVecLong(g: Iterable[Long]): Vector[Long] = g.toVector
+    implicit def toEdgeVecInt(g: Iterable[Long]): Vector[Int] = g.map(_.toInt).toVector
+
     lazy val writer = {
         val x = new File(f"${experimentName}")
         if (x.exists()) {

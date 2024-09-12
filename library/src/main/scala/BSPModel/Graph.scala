@@ -6,10 +6,10 @@ trait Graph[NodeId] {
     // local vertices
     val vertices: Set[NodeId]
     // transitive closure of internal vertices
-    val edges: Map[NodeId, List[NodeId]]
+    val edges: Map[NodeId, Vector[NodeId]]
     // preallocated cache for incoming messages
-    val inEdges: Map[PartitionId, List[NodeId]]
-    val outEdges: Map[PartitionId, List[NodeId]]
+    val inEdges: Map[PartitionId, Vector[NodeId]]
+    val outEdges: Map[PartitionId, Vector[NodeId]]
 }
 
 // Pad topo with cache to buffer messages

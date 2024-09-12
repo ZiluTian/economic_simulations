@@ -52,8 +52,8 @@ class GoLTest extends BSPBenchSuite {
             i match {
                 case (width, height) => {
                     writer.write(f"Config: width ${width} height ${height} rounds ${totalRounds}\n")
-                    val g = new Torus2DGraph(width, height, 0)
-                    val agents = g.map(i => new Cell(i._1, i._2.toSeq))
+                    val graph = GraphFactory.torus2D(width, height).adjacencyList()
+                    val agents = toGraphInt(graph).map(i => new Cell(i._1, i._2.toSeq))
 
                     val initPartition = new Partition {
                         type Member = BSP with ComputeMethod
@@ -63,7 +63,7 @@ class GoLTest extends BSPBenchSuite {
 
                         val topo = new BSPModel.Graph[BSPId]{
                             val vertices = agents.map(a => a.id).toSet
-                            val edges = g.map(i => (i._1, i._2.toList))
+                            val edges = graph.map(i => (i._1, i._2.toList))
                             val inEdges = Map()
                             val outEdges = Map()
                         }

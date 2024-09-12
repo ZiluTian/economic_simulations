@@ -83,8 +83,8 @@ class SBMStatefulTest extends BSPBenchSuite {
     test(f"${experimentName} example should run") {
         List(1000, 10000, 100000).foreach(population => {
             writer.write(f"Config: population ${population} rounds ${totalRounds}\n")
-            val g: Map[Long, Iterable[Long]] = (new SBMGraph(population, connectivity, 0, 5)).g
-            val agents = g.map(i => new PersonAgent(i._1, if (Random.nextInt(100)==0) 0 else 2, i._2.toSeq))
+            val graph = GraphFactory.stochasticBlock(population, connectivity, 0, 5)
+            val agents = toGraphInt(graph.adjacencyList()).map(i => new PersonAgent(i._1.toInt, if (Random.nextInt(100)==0) 0 else 2, i._2.toSeq))
 
             // binding information (partition structure)
             val initPartition = new Partition {
@@ -94,8 +94,8 @@ class SBMStatefulTest extends BSPBenchSuite {
                 val id = 1
 
                 val topo = new BSPModel.Graph[BSPId]{
-                    val vertices = agents.map(a => a.id).toSet
-                    val edges = g.map(i => (i._1, i._2.toList))
+                    val vertices = graph.nodes
+                    val edges = graph.adjacencyList()
                     val inEdges = Map()
                     val outEdges = Map()
                 }

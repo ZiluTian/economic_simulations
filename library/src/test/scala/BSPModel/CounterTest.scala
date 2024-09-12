@@ -42,9 +42,8 @@ class CounterTest extends BSPBenchSuite {
     test("Counter should increse its value in every round") {
         val width = 100
         val height = 100
-        val g = new Torus2DGraph(width, height, 0)
-
-        val agents = g.map(i => new Cell(i._1, i._2.toSeq))
+        val graph = GraphFactory.torus2D(width, height, 0)
+        val agents = toGraphInt(graph.adjacencyList()).map(i => new Cell(i._1, i._2.toSeq))
 
         // binding information (partition structure)
         val initPartition = new Partition {
@@ -54,8 +53,8 @@ class CounterTest extends BSPBenchSuite {
             val id = 1
 
             val topo = new BSPModel.Graph[BSPId]{
-                val vertices = agents.map(a => a.id).toSet
-                val edges = g.map(i => (i._1, i._2.toList))
+                val vertices = graph.nodes
+                val edges = graph.adjacencyList()
                 val inEdges = Map()
                 val outEdges = Map()
             }
