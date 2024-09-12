@@ -4,7 +4,6 @@ package test
 import org.scalatest.FlatSpec
 import simulation.akka.API._
 import meta.API.DeforestationStrategy
-import spire.std.iterable
 
 class shortestPath extends FlatSpec {
     val totalVertices: Int = 50
