@@ -4,14 +4,14 @@ package epidemic
 object MainInit {
     val liftedMain = meta.classLifting.liteLift {
         def apply(socialGraph: cloudcity.lib.Graph.Graph): IndexedSeq[Actor] = {
-            val citizens = socialGraph.map(i => {
+            val citizens = socialGraph.adjacencyList().map(i => {
                 val person = new Person(Random.nextInt(90) + 10)
                 person.id = i._1
                 (i._1, person)
             })
 
             citizens.map(c => {
-                c._2.connectedAgents = socialGraph(c._1).map(i => citizens(i))
+                c._2.connectedAgents = socialGraph.adjacencyList()(c._1).map(i => citizens(i))
             })
             citizens.values.toVector
         }

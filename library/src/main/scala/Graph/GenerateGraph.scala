@@ -5,59 +5,83 @@ import scala.util.Random
 import scala.math.floor
 
 trait Graph {
-    val g: Map[Long, Iterable[Long]]
+    def adjacencyList(): Map[Long, Iterable[Long]]
+    def nodes: Iterable[Long]
+    def edges: Iterable[(Long, Long)]
 }
 
-object Graph{
-    implicit def toGraph(g: Graph): Map[Long, Iterable[Long]] = g.g
+object GraphFactory{
+    def erdosRenyi(totalVertices: Long, edgeProb: Double, startingIndex: Long=0L): Graph = new ErdosRenyiGraph(totalVertices, edgeProb, startingIndex)
+    def stochasticBlock(totalVertices: Long, intraProb: Double, interProb: Double, blocks: Int, startingIndex: Long=0L): Graph = new SBMGraph(totalVertices, intraProb, interProb, blocks, startingIndex)
+    def torus2D(width: Int, height: Int, startingIndex: Long=0L) = new Torus2DGraph(width, height, startingIndex)
+    def bipartite(set1Size: Long, set2Size: Long, startingIndex: Long = 0L) = new BipartiteGraph(set1Size, set2Size, startingIndex)
 }
 
-case class ErdosRenyiGraph(totalVertices: Int, edgeProb: Double, startingIndex: Int = 0) extends Graph {
-    val g: Map[Long, Iterable[Long]] = {
-        val nodes = Range(startingIndex, totalVertices+startingIndex)
-        Range(0, totalVertices).map(i => {
-            (i.toLong + startingIndex, nodes.filter(n => {
-                (n!=i) && edgeProb > Random.nextDouble() 
-            }).map(_.toLong))
-        }).toMap
+class ErdosRenyiGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long) extends Graph {
+    private val g: Map[Long, Iterable[Long]] = generateGraph(totalVertices, edgeProb, startingIndex)
+    
+    private def generateGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long): Map[Long, Iterable[Long]] = {
+        val rand = new Random()
+        (startingIndex until (startingIndex + totalVertices)).map { i =>
+            val neighbors = (startingIndex until (startingIndex + totalVertices)).filter(j => i != j && rand.nextDouble() < edgeProb)
+            i -> neighbors
+        }.toMap
+    }
+    
+    override def adjacencyList(): Map[Long, Iterable[Long]] = g
+
+    override def nodes: Iterable[Long] = g.keys
+
+    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+        neighbors.map(neighbor => (node, neighbor))
     }
 }
 
-case class SBMGraph(totalVertices: Int, p: Double, q: Double, blocks: Int, startingIndex: Int = 0) extends Graph {
-    val g: Map[Long, Iterable[Long]] = {
-        val verticesPerBlock: Int = floor(totalVertices / blocks).toInt
-        var graph: Map[Long, Iterable[Long]] = Map[Long, Iterable[Long]]()
-        // The edge probability between two vertices in the same block is p
-        Range(0, blocks).foreach(i => {
+class SBMGraph(totalVertices: Long, intraProb: Double, interProb: Double, blocks: Int, startingIndex: Long) extends Graph {
+    private val g: Map[Long, Iterable[Long]] = generateGraph(totalVertices, intraProb, interProb, blocks, startingIndex)
+    
+    private def generateGraph(totalVertices: Long, intraProb: Double, interProb: Double, blocks: Int, startingIndex: Long): Map[Long, Iterable[Long]] = {
+        val verticesPerBlock: Long = floor(totalVertices / blocks).toLong
+        var graph = Map.empty[Long, Iterable[Long]]
+        (0L until blocks).foreach(i => {
             val offset = startingIndex + verticesPerBlock * i
             if (i == (blocks-1)) {
-                graph = graph ++ ErdosRenyiGraph(totalVertices + startingIndex - offset, p, offset)
+                graph = graph ++ (new ErdosRenyiGraph(totalVertices + startingIndex - offset, interProb, offset)).adjacencyList
             } else {
-                graph = graph ++ ErdosRenyiGraph(verticesPerBlock, p, offset)
+                graph = graph ++ (new ErdosRenyiGraph(verticesPerBlock, interProb, offset)).adjacencyList
             }
         })
         // The edge probability between two vertices in different blocks is q
-        if (q > 0) {
-            Range(0, totalVertices).foreach(i => {
+        if (interProb > 0) {
+            (0L until totalVertices).foreach(i => {
                 val currentBlock: Int = floor(i / verticesPerBlock).toInt
                 val verticesInOtherBlocks = if (currentBlock > 0){
-                    Range(0, totalVertices).slice(0, currentBlock*verticesPerBlock) ++ Range(verticesPerBlock*(i+1), totalVertices)
+                    (0L until totalVertices).slice(0, currentBlock*verticesPerBlock.toInt) ++ (verticesPerBlock*(i+1) until totalVertices)
                 } else {
-                    Range(verticesPerBlock, totalVertices)
+                    (verticesPerBlock until totalVertices)
                 }
-                graph = graph + (i.toLong -> (graph(i) ++ verticesInOtherBlocks.filter(i => (q > Random.nextDouble())).map(_.toLong)))
+                graph = graph + (i -> (graph(i) ++ verticesInOtherBlocks.filter(_ => interProb > Random.nextDouble())))
             })
         }
         graph
     }
+    
+    override def adjacencyList(): Map[Long, Iterable[Long]] = g
+
+    override def nodes: Iterable[Long] = g.keys
+
+    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+        neighbors.map(neighbor => (node, neighbor))
+    }
 }
 
-case class Torus2DGraph(width: Int, height: Int, startingIndex: Int = 0) extends Graph {
-    val g: Map[Long, IndexedSeq[Long]] = {
-        Range(0, width * height).map(index => {
-            val x = index % width
-            val y = index / width
-
+class Torus2DGraph(width: Int, height: Int, startingIndex: Long) extends Graph {
+    private val g: Map[Long, Iterable[Long]] = generateGraph(width, height, startingIndex)
+    
+    private def generateGraph(width: Int, height: Int, startingIndex: Long): Map[Long, Iterable[Long]] = {
+        (0L until width * height).map(index => {
+            val x: Long = index % width
+            val y: Long = index / width
             val neighbors = for {
                 i <- -1 to 1
                 j <- -1 to 1
@@ -65,17 +89,37 @@ case class Torus2DGraph(width: Int, height: Int, startingIndex: Int = 0) extends
                     dx = (x + i + width) % width
                     dy = (y + j + height) % height
             } yield dy * width + dx
-            (index.toLong + startingIndex, neighbors.map(n => n.toLong + startingIndex))
+            (index + startingIndex, neighbors.map(n => n + startingIndex))
         }).toMap
+    }
+
+    override def adjacencyList(): Map[Long, Iterable[Long]] = g
+
+    override def nodes: Iterable[Long] = g.keys
+
+    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+        neighbors.map(neighbor => (node, neighbor))
     }
 }
 
-case class BipartiteGraph(set1Size: Int, set2Size: Int, startingIndex: Int = 0) extends Graph {
-    val g: Map[Long, Iterable[Long]] = {        
-        (Range(startingIndex, set1Size + startingIndex).map(i => {
-            (i.toLong, Range(set1Size + startingIndex, set2Size).map(_.toLong))
-        }) ++ Range(startingIndex + set1Size, startingIndex + set1Size + set2Size).map(i => {
-            (i.toLong, Range(startingIndex, startingIndex +startingIndex + set1Size).map(_.toLong))
-        })).toMap
+class BipartiteGraph(set1Size: Long, set2Size: Long, startingIndex: Long) extends Graph {
+    private val g: Map[Long, Iterable[Long]] = generateGraph(set1Size, set2Size, startingIndex)
+    
+    private def generateGraph(set1Size: Long, set2Size: Long, startingIndex: Long): Map[Long, Iterable[Long]] = {
+        var graph = Map.empty[Long, Iterable[Long]]
+        val set1 = startingIndex until (set1Size + startingIndex)
+        val set2 = (set1Size + startingIndex) until (set1Size + startingIndex + set2Size)
+        // Create edges between every node in set1 and every node in set2
+        set1.foreach(n => graph = graph + (n -> set2))
+        set2.foreach(n => graph = graph + (n -> set1))
+        graph
+    }
+
+    override def adjacencyList(): Map[Long, Iterable[Long]] = g
+
+    override def nodes: Iterable[Long] = g.keys
+
+    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+        neighbors.map(neighbor => (node, neighbor))
     }
 }
