@@ -37,6 +37,7 @@ class Worker {
 
     private var completedAgents: Long = 0
     private var registeredWorkers: AtomicInteger = new AtomicInteger(0)
+    private var logInitialized: Boolean = true
 
     def apply(id: Int, sims: Seq[Actor], totalWorkers: Int, builder: Option[TimeseriesBuilder]): Behavior[WorkerEvent] = Behaviors.setup { ctx =>
         localSims = sims.map(x => (x.id, x)).toMap
@@ -45,6 +46,10 @@ class Worker {
         workerId = id
 
         val simIds = sims.map(i => i.id).toSet
+
+        if (builder.isDefined) {
+            logInitialized = false
+        }
 
         if (simulation.akka.API.OptimizationConfig.conf == simulation.akka.API.DirectMethodCall){
             sims.foreach(i => {
@@ -65,6 +70,10 @@ class Worker {
                 if (logger.size == 1) {
                     ctx.log.debug(f"Log controller registered!")
                     loggerRef = logger.head
+                    logInitialized = true
+                    if (receivedWorkers.keys().size == totalWorkers-1){
+                        ctx.self ! RoundStart()
+                    }
                 }
                 Prepare()
         }  
@@ -127,7 +136,11 @@ class Worker {
                     })
                     receivedWorkers.putIfAbsent(wid, 0)
                     if (receivedWorkers.keys().size == totalWorkers-1){
-                        ctx.self ! RoundStart()
+                        if (logInitialized) {
+                            ctx.self ! RoundStart()
+                        } else {
+                            Behaviors.same
+                        }
                     }
                     worker(builder)
                 
@@ -186,7 +199,11 @@ class Worker {
                     this.availability = availability
                     logicalClock += acceptedInterval       
                     if (receivedWorkers.keys().size == totalWorkers-1){
-                        ctx.self ! RoundStart()
+                        if (logInitialized) {
+                            ctx.self ! RoundStart()
+                        } else {
+                            Behaviors.same
+                        }
                     } 
                     worker(builder)
                     
@@ -194,6 +211,7 @@ class Worker {
                     end = System.currentTimeMillis()
                     ctx.log.debug(f"Worker ${workerId} runs for ${end-start} ms, propose ${proposeInterval}")
                     if (builder.isDefined){
+                        // loggerRef ! LogControllerSpec.AggregateLog(workerId, logicalClock, localSims.map(s => s._2).map(agent => agent.SimClone()))
                         loggerRef ! LogControllerSpec.AggregateLog(workerId, logicalClock, localSims.map(s => s._2).map(agent => builder.get.strategy.mapper(agent.SimClone())))
                     }
 

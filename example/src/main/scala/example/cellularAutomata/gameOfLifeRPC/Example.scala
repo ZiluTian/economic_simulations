@@ -3,7 +3,7 @@ package gameOfLifeRPC
 
 import scala.collection.mutable.{Map => MutMap}
 
-import cloudcity.lib.Graph.Torus2DGraph
+import cloudcity.lib.Graph.GraphFactory._
 
 object MainInit {
     val liftedMain = meta.classLifting.liteLift {
@@ -21,7 +21,7 @@ object MainInit {
             })
 
             // 2D space
-            val graph: Map[Long, Iterable[Long]] = Torus2DGraph(width, height)
+            val graph: Map[Long, Iterable[Long]] = torus2D(width, height).adjacencyList()
 
             cells.zipWithIndex.map(c => {
                 c._1.connectedAgents = graph(c._2).map(i => cells(i.toInt))
