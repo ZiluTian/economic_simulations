@@ -1,7 +1,5 @@
 package BSPModel
 
-import scala.collection.mutable.{Map => MutMap}
-
 trait Graph[NodeId] {
     // local vertices
     val vertices: Set[NodeId]
