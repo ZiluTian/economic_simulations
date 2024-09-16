@@ -169,7 +169,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                     // partition ids
                     // This restricts fuse operation to each partition
                     // Cannot fuse different parts of a partition separately
-                    val receiveFrom = part.topo.inEdges.keySet
+                    val receiveFrom = part.topo.inExtVertices.keySet
 
                     type Message = PartitionMessage{type M = BSP; type Idx = NodeId}
 

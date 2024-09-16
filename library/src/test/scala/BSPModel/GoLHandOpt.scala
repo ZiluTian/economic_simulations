@@ -5,14 +5,14 @@ import scala.util.Random
 
 class handOptGoLTest extends BSPBenchSuite {
     
-    val totalRounds: Int = 100
+    val totalRounds: Int = 200
     val experimentName: String = "Game of life (graph-centric)"
 
     test(f"The hand-optimized $experimentName example (shallow copy)"){
-        List((100, 10), (100, 100), (100, 1000), (1000, 1000)).foreach(i => {
+        List((100, 10), (100, 100)).foreach(i => {
             i match {
                 case (width, height) => {
-                    writer.write(f"Config: width ${width} height ${height} rounds ${totalRounds}")
+                    writer.write(f"Config: width ${width} height ${height} rounds ${totalRounds} ")
                     var readOnly = Array.tabulate(width, height)((x, y) => Random.nextBoolean())
                     var readWrite = readOnly.map(i => i.clone)
                     benchmarkTool[Unit](writer, { 

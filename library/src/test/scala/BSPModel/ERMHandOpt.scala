@@ -19,11 +19,11 @@ class handOptERMTest extends BSPBenchSuite {
                     var risk: Double) 
 
     test(f"The hand-optimized $experimentName example"){
-        List(1000, 10000).foreach(population => {
-            writer.write(f"Config: population ${population} rounds ${totalRounds}\n")
+        List(10000).foreach(population => {
+            writer.write(f"Config: population ${population} rounds ${totalRounds} ")
 
             val graph = toGraphInt(GraphFactory.erdosRenyi(population, connectivity).adjacencyList())
-            var readOnly: Array[Person] = (0 to population-1).map(i => {
+            var readOnly: Array[Person] = (0 until population).map(i => {
                 val age: Int = Random.nextInt(90)+10
                 Person(age, 
                     graph.getOrElse(i, List()), 

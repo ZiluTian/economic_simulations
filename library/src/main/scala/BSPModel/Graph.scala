@@ -5,9 +5,9 @@ trait Graph[NodeId] {
     val vertices: Set[NodeId]
     // transitive closure of internal vertices
     val edges: Map[NodeId, Vector[NodeId]]
-    // preallocated cache for incoming messages
-    val inEdges: Map[PartitionId, Vector[NodeId]]
-    val outEdges: Map[PartitionId, Vector[NodeId]]
+    // synthesized message encoding for incoming messages
+    val inExtVertices: Map[PartitionId, Vector[NodeId]]
+    val outIntVertices: Map[PartitionId, Vector[NodeId]]
 }
 
 // Pad topo with cache to buffer messages
@@ -17,12 +17,12 @@ case class ArrayGraph[NodeId](
 ) extends Graph[NodeId] {
     val vertices = g.vertices
     val edges = g.edges
-    val inEdges = g.inEdges
-    val outEdges = g.outEdges
+    val inExtVertices = g.inExtVertices
+    val outIntVertices = g.outIntVertices
 
     def getInboxCacheIndex(i: NodeId): Option[(PartitionId, Int)] = {
         // return the index of a value in a cache
-        inEdges.collectFirst {
+        inExtVertices.collectFirst {
             case (key, list) if list.contains(i) =>
             (key, list.indexOf(i))
         }
@@ -32,7 +32,7 @@ case class ArrayGraph[NodeId](
 object ArrayGraph{
     def fromGraph[NodeId](g: Graph[NodeId]): ArrayGraph[NodeId] = {
         ArrayGraph[NodeId](g, 
-            g.inEdges.map(i => {
+            g.inExtVertices.map(i => {
                 (i._1, new Array[Any](i._2.size))
             })
         )

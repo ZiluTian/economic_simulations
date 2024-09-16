@@ -147,20 +147,20 @@ trait BSPBenchSuite extends AnyFunSuite {
             var out = MutMap[Int, Vector[BSPId]]().withDefaultValue(Vector[BSPId]())
 
             unvisitedEdges.foreach {
-                case (src, dst) if x.contains(src) =>
+                case (src, dst) if x.contains(src) && !x.contains(dst) =>
                     val partId = indexedVertex(dst)
-                    in.update(partId, in(partId) :+ dst)
-                case (src, dst) if x.contains(dst) => 
-                    val partId = indexedVertex(src)
                     out.update(partId, out(partId) :+ src)
+                case (src, dst) if x.contains(dst) && !x.contains(src) => 
+                    val partId = indexedVertex(src)
+                    in.update(partId, in(partId) :+ src)
                 case _ => 
             }
 
             new BSPModel.Graph[BSPId] {
                 val vertices: Set[BSPId] = x
                 val edges: Map[Int, Vector[BSPId]] = Map()
-                val inEdges: Map[Int, Vector[BSPId]] = in.toMap
-                val outEdges: Map[Int, Vector[BSPId]] = out.toMap
+                val inExtVertices: Map[Int, Vector[BSPId]] = in.map(i => (i._1, i._2.sorted)).toMap
+                val outIntVertices: Map[Int, Vector[BSPId]] = out.map(i => (i._1, i._2.sorted)).toMap
             }
         })
     }

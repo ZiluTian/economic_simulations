@@ -93,8 +93,8 @@ class ERMTest extends BSPBenchSuite {
             val topo = new BSPModel.Graph[BSPId]{
                 val vertices = agents.map(a => a.id).toSet
                 val edges = graph.map(i => (i._1, i._2.toList))
-                val inEdges = Map()
-                val outEdges = Map()
+                val inExtVertices = Map()
+                val outIntVertices = Map()
             }
 
             val members = agents.toList

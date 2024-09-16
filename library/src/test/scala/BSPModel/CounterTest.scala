@@ -55,8 +55,8 @@ class CounterTest extends BSPBenchSuite {
             val topo = new BSPModel.Graph[BSPId]{
                 val vertices = graph.nodes
                 val edges = graph.adjacencyList()
-                val inEdges = Map()
-                val outEdges = Map()
+                val inExtVertices = Map()
+                val outIntVertices = Map()
             }
 
             val members = agents.toList
