@@ -32,7 +32,7 @@ class ErdosRenyiGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long
 
     override def nodes: Iterable[Long] = g.keys
 
-    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+    override def edges: Iterable[(Long, Long)] = g.toIterable.flatMap { case (node, neighbors) =>
         neighbors.map(neighbor => (node, neighbor))
     }
 }
@@ -70,7 +70,7 @@ class SBMGraph(totalVertices: Long, intraProb: Double, interProb: Double, blocks
 
     override def nodes: Iterable[Long] = g.keys
 
-    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+    override def edges: Iterable[(Long, Long)] = g.toIterable.flatMap { case (node, neighbors) =>
         neighbors.map(neighbor => (node, neighbor))
     }
 }
@@ -97,8 +97,8 @@ class Torus2DGraph(width: Int, height: Int, startingIndex: Long) extends Graph {
 
     override def nodes: Iterable[Long] = g.keys
 
-    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
-        neighbors.map(neighbor => (node, neighbor))
+    override def edges: Iterable[(Long, Long)] = g.toIterable.flatMap { case (node, neighbors) =>
+        neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
     }
 }
 
@@ -119,7 +119,7 @@ class BipartiteGraph(set1Size: Long, set2Size: Long, startingIndex: Long) extend
 
     override def nodes: Iterable[Long] = g.keys
 
-    override def edges: Iterable[(Long, Long)] = g.flatMap { case (node, neighbors) =>
+    override def edges: Iterable[(Long, Long)] = g.toIterable.flatMap { case (node, neighbors) =>
         neighbors.map(neighbor => (node, neighbor))
     }
 }
