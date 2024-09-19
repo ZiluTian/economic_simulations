@@ -26,10 +26,15 @@ case object RefineCommunication extends Optimizer[
             type NodeId = BSPId
             type Member = (BSP with ComputeMethod, (Iterable[BSPId], Iterable[BSPId]))
 
+            dbg(f"Partition vertices in the topo are ${part.topo.vertices}")
+            dbg(f"External vertices that are sources of incoming edges are ${part.topo.inExtVertices}")
+            dbg(f"Internal vertices that are sources of outgoing edges are ${part.topo.outIntVertices}")
+
             val id = part.id
             val topo: Graph[NodeId] = part.topo
             val members: List[Member] = part.members.map(bsp => {
                 ddbg(f"${bsp.id} receives messages from ${bsp.receiveFrom.mkString(", ")}")
+                assert(part.topo.vertices.contains(bsp.id))
                 (bsp, bsp.receiveFrom match {
                     case FixedCommunication(xs) => {
                         xs.partition(i => part.topo.vertices.contains(i))
@@ -52,25 +57,27 @@ case object StageRemoteCommunication extends Optimizer[
     Partition{type Member = (BSP with ComputeMethod with Stage, (Iterable[BSPId], Iterable[BSPId])); type NodeId = BSPId}] {
     
     def transform(part: Partition{type Member = (BSP with ComputeMethod, (Iterable[BSPId], Iterable[BSPId])); type NodeId = BSPId}): Partition{type Member = (BSP with ComputeMethod with Stage, (Iterable[BSPId], Iterable[BSPId])); type NodeId = BSPId} = {
-
+        dbg(f"Partitioned neighbors are ${part.members.head._2._1} ${part.members.head._2._2}")
         new Partition {
             type NodeId = BSPId
             type Member = (BSP with ComputeMethod with Stage, (Iterable[BSPId], Iterable[BSPId]))
 
             val id = part.id
             // pad with inCache
-            val topo = ArrayGraph.fromGraph(part.topo)
+            val topo: ArrayGraph[BSPId] = ArrayGraph.fromGraph(part.topo)
+            dbg(f"Topo inExtVertices is ${topo.inExtVertices}")
+
             val members: List[Member] = part.members.map(bspIt => {
                 val bsp = bspIt._1
                 val remoteIds = bspIt._2._2
-
                 ddbg(f"${bsp.id} receives local messages from ${bspIt._2._1.mkString(", ")} and remote messages from ${remoteIds.mkString(", ")}")
 
                 def genNewBSP(): BSP with ComputeMethod with Stage = 
                     new BSP with ComputeMethod with Stage { selfBSP => 
 
                         type State = bsp.State
-                        type Message = bsp.Message
+                        type InMessage = bsp.InMessage
+                        type OutMessage = bsp.OutMessage
                         
                         var state = bsp.state
                         val id = bsp.id
@@ -79,24 +86,34 @@ case object StageRemoteCommunication extends Optimizer[
                         val stagedComputation: List[StagedExpr] = 
                             if (remoteIds.size > 0) {
                                 List(new StagedExpr {
-                                    type Message = selfBSP.Message
+                                    type Message = selfBSP.InMessage
 
-                                    private val receiveRemote: Iterable[(PartitionId, Int)] = remoteIds.map(i => topo.asInstanceOf[ArrayGraph[BSPId]].getInboxCacheIndex(i).get)
+                                    // .toVector transforms the map to iterable, to allow duplicate keys
+                                    private val receiveRemote: Iterable[(PartitionId, Int)] = 
+                                        topo.inExtVertices.map(k => (k._1, k._2.intersect(remoteIds.toVector))).filter(i => !i._2.isEmpty).toVector.flatMap(i => i._2.map(j => (i._1, topo.inExtVertices(i._1).indexOf(j))))
 
+                                    // dbg(f"Remote ids are $remoteIds local indices are $receiveRemote")
+                                    assert(remoteIds.size == receiveRemote.size)
+                                        // remoteIds.map(i => topo.asInstanceOf[ArrayGraph[BSPId]].getInboxCacheIndex(i).get)
                                     override def compile(): Option[Message] = {
-                                        selfBSP.partialCompute(receiveRemote.map(i => {
-                                            topo.asInstanceOf[ArrayGraph[BSPId]].inCache(i._1)(i._2).asInstanceOf[bsp.Message]
-                                        }))
+                                        var tmp: List[bsp.InMessage] = List()
+                                        receiveRemote.foreach(i => {
+                                            if (topo.inCache.get(i._1).isDefined && topo.inCache(i._1).size >= i._2) {
+                                                tmp = topo.inCache(i._1)(i._2).asInstanceOf[bsp.InMessage] :: tmp
+                                            }
+                                        })
+                                        // dbg("Call partial compute by compiling away received remote!")
+                                        partialCompute(tmp)
                                     }
-                                    ddbg("Receive from contains remote values " + receiveRemote)
+                                    // ddbg("Receive from contains remote values " + receiveRemote)
                                 })
                             } else {
                                 List()
                             }
 
-                        def partialCompute(ms: Iterable[Message]): Option[Message] = bsp.partialCompute(ms)
-                        def updateState(s: State, m: Option[Message]): State = bsp.updateState(s, m)
-                        def stateToMessage(s: State): Message = bsp.stateToMessage(s)
+                        def partialCompute(ms: Iterable[InMessage]): Option[InMessage] = bsp.partialCompute(ms)
+                        def updateState(s: State, m: Option[InMessage]): State = bsp.updateState(s, m)
+                        def stateToMessage(s: State): OutMessage = bsp.stateToMessage(s)
                 }
                 (genNewBSP(), (bspIt._2._1, remoteIds))
             })
@@ -122,107 +139,87 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                 type Member = BSP with ComputeMethod
 
                 val id = part.id
-                val topo: Graph[NodeId] = part.topo
+                val topo: ArrayGraph[NodeId] = new ArrayGraph[NodeId] {
+                    val vertices = part.topo.vertices
+                    val edges = part.topo.edges
+                    val inExtVertices = part.topo.inExtVertices
+                    val outIntVertices = part.topo.outIntVertices.map(i => {
+                        (i._1, i._2.map(j => bspIds.indexOf(j)))
+                    })
+                    val inCache = MutMap[PartitionId, Vector[_ <: Any]]()
+                }
 
                 def genNewBSP(bsp: BSP with ComputeMethod with Stage, receiveFromLocal: Iterable[BSPId]): BSP with ComputeMethod with DoubleBuffer with Stage = 
                     new BSP with ComputeMethod with Stage with DoubleBuffer { selfBSP => 
 
                         type State = bsp.State
-                        type Message = bsp.Message
-                        
+                        type InMessage = bsp.InMessage
+                        type OutMessage = bsp.OutMessage
+
                         var state = bsp.state
                         var publicState = bsp.stateToMessage(bsp.state)
                         val id = bsp.id
                         val receiveFrom = bsp.receiveFrom
 
                         val stagedComputation: List[StagedExpr] = 
-                            if (localIds.size > 0) {
+                            if (receiveFromLocal.size > 0) {
                                 new StagedExpr {
                                     type NodeId = Int
-                                    type Message = selfBSP.Message
+                                    type Message = selfBSP.InMessage
 
                                     private val receiveLocal: Iterable[Int] = receiveFromLocal.map(i => bspIds.indexOf(i))
 
-                                    ddbg(selfBSP.id + " receive local values are " + receiveLocal.mkString(" ,"))
+                                    // ddbg(selfBSP.id + " receive local values are " + receiveLocal.mkString(" ,"))
 
                                     override def compile(): Option[Message] = {
-                                        assert(receiveLocal.size > 0)
-                                        
-                                        selfBSP.partialCompute(receiveLocal.map(i => members.head.state.asInstanceOf[(Array[BSP with ComputeMethod with Stage with DoubleBuffer], Option[PartitionMessage{type M = BSP; type Idx = NodeId}])]._1(i).publicState.asInstanceOf[Message]))
+                                        // dbg("Call partial compute by compiling away locals!")
+                                        // assert(receiveLocal.size > 0)
+                                        selfBSP.partialCompute(receiveLocal.map(i => members.head.state.asInstanceOf[(Array[BSP with ComputeMethod with Stage with DoubleBuffer])](i).publicState.asInstanceOf[Message]))
                                     }
                                 } :: bsp.stagedComputation
                             } else {
                                 bsp.stagedComputation
                             }
 
-                        def partialCompute(ms: Iterable[Message]): Option[Message] = bsp.partialCompute(ms)
-                        def updateState(s: State, m: Option[Message]): State = bsp.updateState(s, m)
-                        def stateToMessage(s: State): Message = bsp.stateToMessage(s)
+                        def partialCompute(ms: Iterable[InMessage]): Option[InMessage] = bsp.partialCompute(ms)
+                        def updateState(s: State, m: Option[InMessage]): State = bsp.updateState(s, m)
+                        def stateToMessage(s: State): OutMessage = bsp.stateToMessage(s)
                 }
 
                 // merged BSP no longer has a publicState for other BSPs
                 val mergedBSP = new BSP with ComputeMethod {
                     // padded with cached message results
-                    type State = (Array[BSP with ComputeMethod with Stage with DoubleBuffer], Option[PartitionMessage{type M = BSP; type Idx = NodeId}])
+                    type State = Array[BSP with ComputeMethod with Stage with DoubleBuffer]
                     
                     val id = part.id
                     // partition ids
                     // This restricts fuse operation to each partition
                     // Cannot fuse different parts of a partition separately
                     val receiveFrom = part.topo.inExtVertices.keySet
+                    type InMessage = Vector[Double]
+                    type OutMessage = Vector[Double]
 
-                    type Message = PartitionMessage{type M = BSP; type Idx = NodeId}
-
-                    var state: State = (part.members.map(b => genNewBSP(b._1.asInstanceOf[BSP with ComputeMethod with Stage], b._2._1)).toArray.asInstanceOf[Array[BSP with ComputeMethod with Stage with DoubleBuffer]], None)
+                    var state: State = (part.members.map(b => genNewBSP(b._1.asInstanceOf[BSP with ComputeMethod with Stage], b._2._1)).toArray.asInstanceOf[Array[BSP with ComputeMethod with Stage with DoubleBuffer]])
 
                     // simply update the message component of the state
                     // executing BSPs in the array is done in in-place run
-                    def updateState(s: State, m: Option[Message]): State = {
-                        m match {
-                            case None => s
-                            case Some(m2) => if (s._2.isEmpty){
-                                (s._1, Some(m2))
-                            } else {
-                                val combinedMsg = new PartitionMessage {
-                                    type M = BSP
-                                    type Idx = NodeId
+                    // leave it to runtime
+                    def updateState(s: State, m: Option[InMessage]): State = ???
 
-                                    val value = s._2.get.value ++ m2.value
-                                    val messageEncoding = s._2.get.messageEncoding ++ m2.messageEncoding
-                                    val schema = s._2.get.schema ++ m2.schema
-                                }                                        
-                                (s._1, Some(combinedMsg))
-                            }
-                        }
-                    }
-
-                    def stateToMessage(s: State): Message = ???
-                    def partialCompute(ms: Iterable[Message]): Option[Message] = {
-                        ms match {
-                            case Nil => None
-                            case m :: Nil => Some(m)
-                            case _ => 
-                                Some(new PartitionMessage {
-                                    type M = BSP
-                                    type Idx = NodeId
-
-                                    val value = ms.map(i => i.value).flatten.toList
-                                    val messageEncoding = ms.map(i => i.messageEncoding).flatten.toList
-                                    val schema = ms.flatMap(i => i.schema).toMap
-                                })
-                        }
-                    }
+                    // Need to generate different messages for different partitions. Leave it to runtime
+                    def stateToMessage(s: State): OutMessage = ???
+                    def partialCompute(ms: Iterable[InMessage]): Option[InMessage] = ???
 
                     // in-place update to each BSP inside
-                    override def run(ms: Iterable[Message]): Unit = {
-                        state._1.foreach(bsp => {
+                    override def run(ms: Iterable[InMessage]): Unit = {
+                        state.foreach(bsp => {
                             bsp.run(List())
                         })
-                        state._1.foreach(_.updatePublicState())
+                        state.foreach(_.updatePublicState())
                     }
 
                     override def toString(): String = {
-                        state._1.map(_.state).mkString(", ")
+                        state.map(_.state).mkString(", ")
                     }
                 }
 

@@ -10,11 +10,11 @@ trait BSP {
     val receiveFrom: Iterable[BSPId]
 
     // Specialized kernel compiled from the AST
-    def run(ms: Iterable[Message]): Unit = {
+    def run(ms: Iterable[InMessage]): Unit = {
         state = run(state, ms)
     }
 
-    def message(): Message = {
+    def message(): OutMessage = {
         stateToMessage(state)
     }
 }
