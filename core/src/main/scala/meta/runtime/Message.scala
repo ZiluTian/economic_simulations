@@ -6,14 +6,24 @@ import com.fasterxml.jackson.annotation.{JsonTypeInfo, JsonSubTypes, JsonTypeNam
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
   Array(
+    new JsonSubTypes.Type(value=classOf[BoolMessage], name = "boolMessage"),
     new JsonSubTypes.Type(value=classOf[IntMessage], name = "intMessage"),
     new JsonSubTypes.Type(value=classOf[DoubleMessage], name = "doubleMessage"),
+    new JsonSubTypes.Type(value = classOf[BoolArrayMessage], name = "boolArrayMessage"),
+    new JsonSubTypes.Type(value = classOf[IntArrayMessage], name = "intArrayMessage"),
     new JsonSubTypes.Type(value = classOf[DoubleArrayMessage], name = "doubleArrayMessage"),
+    new JsonSubTypes.Type(value = classOf[BoolVectorMessage], name = "boolVectorMessage"),
+    new JsonSubTypes.Type(value = classOf[IntVectorMessage], name = "intVectorMessage"),
+    new JsonSubTypes.Type(value = classOf[DoubleVectorMessage], name = "doubleVectorMessage"),
     new JsonSubTypes.Type(value=classOf[RequestMessage], name = "requestMessage"),
     new JsonSubTypes.Type(value=classOf[ResponseMessage], name = "responseMessage")))
 trait Message extends JsonSerializable {
   def value: Any
 }
+
+@JsonTypeName("boolMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class BoolMessage(value: Boolean) extends Message
 
 @JsonTypeName("intMessage")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -23,10 +33,29 @@ case class IntMessage(value: Int) extends Message
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 case class DoubleMessage(value: Double) extends Message
 
+@JsonTypeName("boolArrayMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class BoolArrayMessage(value: Array[Boolean]) extends Message
+
+@JsonTypeName("intArrayMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class IntArrayMessage(value: Array[Int]) extends Message
 
 @JsonTypeName("doubleArrayMessage")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 case class DoubleArrayMessage(value: Array[Double]) extends Message
+
+@JsonTypeName("boolVectorMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class BoolVectorMessage(value: Vector[Boolean]) extends Message
+
+@JsonTypeName("intVectorMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class IntVectorMessage(value: Vector[Int]) extends Message
+
+@JsonTypeName("doubleVectorMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class DoubleVectorMessage(value: Vector[Double]) extends Message
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
