@@ -21,11 +21,16 @@ class ErdosRenyiGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long
     private val g: Map[Long, Iterable[Long]] = generateGraph(totalVertices, edgeProb, startingIndex)
     
     private def generateGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long): Map[Long, Iterable[Long]] = {
+        var graph = Map.empty[Long, List[Long]]
         val rand = new Random()
         (startingIndex until (startingIndex + totalVertices)).map { i =>
-            val neighbors = (startingIndex until (startingIndex + totalVertices)).filter(j => i != j && rand.nextDouble() < edgeProb)
-            i -> neighbors
-        }.toMap
+            val neighbors = (i+1 until (startingIndex + totalVertices)).filter(_ => rand.nextDouble() < edgeProb)
+            graph = graph + (i -> (graph.getOrElse(i, List()) ++ neighbors))
+            neighbors.foreach(n => {
+                graph = graph + (n -> (i :: graph.getOrElse(n, List())))
+            })
+        }
+        graph
     }
     
     override def adjacencyList(): Map[Long, Iterable[Long]] = g
@@ -46,9 +51,9 @@ class SBMGraph(totalVertices: Long, intraProb: Double, interProb: Double, blocks
         (0L until blocks).foreach(i => {
             val offset = startingIndex + verticesPerBlock * i
             if (i == (blocks-1)) {
-                graph = graph ++ (new ErdosRenyiGraph(totalVertices + startingIndex - offset, interProb, offset)).adjacencyList
+                graph = graph ++ (new ErdosRenyiGraph(totalVertices + startingIndex - offset, intraProb, offset)).adjacencyList
             } else {
-                graph = graph ++ (new ErdosRenyiGraph(verticesPerBlock, interProb, offset)).adjacencyList
+                graph = graph ++ (new ErdosRenyiGraph(verticesPerBlock, intraProb, offset)).adjacencyList
             }
         })
         // The edge probability between two vertices in different blocks is q
@@ -71,7 +76,7 @@ class SBMGraph(totalVertices: Long, intraProb: Double, interProb: Double, blocks
     override def nodes: Iterable[Long] = g.keys
 
     override def edges: Iterable[(Long, Long)] = g.toIterable.flatMap { case (node, neighbors) =>
-        neighbors.map(neighbor => (node, neighbor))
+        neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
     }
 }
 
@@ -98,7 +103,7 @@ class Torus2DGraph(width: Int, height: Int, startingIndex: Long) extends Graph {
     override def nodes: Iterable[Long] = g.keys
 
     override def edges: Iterable[(Long, Long)] = g.toIterable.flatMap { case (node, neighbors) =>
-        neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
+        neighbors.map(neighbor => (node, neighbor))
     }
 }
 
