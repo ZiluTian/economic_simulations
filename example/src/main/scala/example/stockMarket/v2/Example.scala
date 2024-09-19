@@ -1,18 +1,17 @@
 package example
 package stockMarket
-
-import scala.collection.mutable.Buffer
+package v2
 
 object Example extends App {
-    
     val liftedMain = meta.classLifting.liteLift {
         def apply(totalMarkets: Int, tradersPerMarket: Int): IndexedSeq[Actor] = {
             val initialWealth: Double = 1000
             val interestRate: Double = 0.001
 
-            Range(0, totalMarkets).flatMap(i => {
+            (0 until totalMarkets).flatMap(i => {
                 val traders = (1 to tradersPerMarket).map(x => new Trader(initialWealth, interestRate))
-                val market = new Market(traders.toList)
+                val market = new Market()
+                market.connectedAgentIds = traders.map(i => i.id.toInt).map(_.toLong)
                 market +: traders
             })
         }

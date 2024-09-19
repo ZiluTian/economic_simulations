@@ -1,10 +1,10 @@
 package example
 package epidemic
+package v1
 
 import meta.classLifting.SpecialInstructions._
 import squid.quasi.lift
 import squid.lib.transparencyPropagating
-import example.epidemic._
 
 @lift
 class Person(val age: Int) extends Actor {

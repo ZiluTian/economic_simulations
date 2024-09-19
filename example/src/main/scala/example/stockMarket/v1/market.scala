@@ -1,10 +1,9 @@
 package example
 package stockMarket
+package v1
 
 import squid.quasi.lift
 import meta.classLifting.SpecialInstructions._
-import squid.lib.transparencyPropagating
-import scala.collection.mutable.{Map => MutMap}
 
 @lift 
 class Market(val traders: List[Trader]) extends Actor {
@@ -30,7 +29,7 @@ class Market(val traders: List[Trader]) extends Actor {
             val sellOrders = x.count(_ == 2)
             stockPrice = stock.priceAdjustment(buyOrders, sellOrders)
             dividendPerShare = stock.getDividend()
-            println(buyOrders + ", " + sellOrders + ", " + dividendPerShare + ", " + stockPrice)
+            // println(buyOrders + ", " + sellOrders + ", " + dividendPerShare + ", " + stockPrice)
         }
     }
 }

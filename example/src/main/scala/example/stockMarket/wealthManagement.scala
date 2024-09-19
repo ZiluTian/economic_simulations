@@ -1,14 +1,14 @@
 package example
 package stockMarket
 
-import conditionActionRule._
+import ConditionActionRule._
 
 class WealthManagement(var initWealth: Double, val interestRate: Double) {
     var bankDeposit = initWealth * 0.5
     var cash = initWealth - bankDeposit
     var shares: Double = 0
     
-    val rules: List[conditionActionRule] = List(Rule1, Rule2, Rule3, Rule4, Rule5)
+    val rules: List[ConditionActionRule] = List(Rule1, Rule2, Rule3, Rule4, Rule5)
     // Strength of the rules
     val strength: Array[Int] = Array.ofDim[Int](rules.size)
 

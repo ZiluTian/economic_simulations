@@ -1,5 +1,6 @@
 package example
 package epidemic
+package v1
 
 object MainInit {
     val liftedMain = meta.classLifting.liteLift {

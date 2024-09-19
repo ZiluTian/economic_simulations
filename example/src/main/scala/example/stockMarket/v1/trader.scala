@@ -1,15 +1,14 @@
 package example
 package stockMarket
+package v1
 
 import squid.quasi.lift
 import meta.classLifting.SpecialInstructions._
-import squid.lib.transparencyPropagating
 
 @lift 
 class Trader(var budget: Double, val interestRate: Double) extends Actor {
 
     var wealth: WealthManagement = null
-    var estimatedWealth: Double = 0
     
     // At each round, respond to the market state with an action
     // true: to buy; false: to sell; None: no action

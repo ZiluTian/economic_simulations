@@ -1,17 +1,17 @@
 package example
 package stockMarket
 
-sealed abstract class conditionActionRule() {
+sealed abstract class ConditionActionRule() {
     // 0: no action, 1: buy, 2: sell
     def eval(stockPrice: Double, marketState: List[Int], cash: Double, shares: Double): Int = ???
 }
 
-object conditionActionRule {
+object ConditionActionRule {
     val buy: Int = 1
     val sell: Int = 2
     val noAction: Int = 0
   // Buy if the dividend increases and sell if the dividend decreases
-  final case object Rule1 extends conditionActionRule {
+  final case object Rule1 extends ConditionActionRule {
     override def eval(stockPrice: Double, marketState: List[Int], cash: Double, shares: Double): Int ={
         if (marketState(0)==1 && stockPrice < cash){
             buy
@@ -25,7 +25,7 @@ object conditionActionRule {
 
   // Buy if 100-day average decreases and sell if 10-day average increases
 // If both conditions are met, prioritize sell
-  final case object Rule2 extends conditionActionRule {
+  final case object Rule2 extends ConditionActionRule {
     override def eval(stockPrice: Double, marketState: List[Int], cash: Double, shares: Double): Int ={
         if (marketState(1) == 1 && shares >= 1){
             sell
@@ -38,7 +38,7 @@ object conditionActionRule {
   }
 
   // Buy if 10-day average decreases and sell if 10-day average increases
-  final case object Rule3 extends conditionActionRule {
+  final case object Rule3 extends ConditionActionRule {
         override def eval(stockPrice: Double, marketState: List[Int], cash: Double, shares: Double): Int ={
         if (marketState(1) == 2 && stockPrice < cash){
             buy
@@ -51,7 +51,7 @@ object conditionActionRule {
   }
 
     // Random buy and sell
-  final case object Rule4 extends conditionActionRule {
+  final case object Rule4 extends ConditionActionRule {
         override def eval(stockPrice: Double, marketState: List[Int], cash: Double, shares: Double): Int ={
         if (Random.nextBoolean){
             if (stockPrice < cash) {
@@ -71,7 +71,7 @@ object conditionActionRule {
 
   // Buy if 50-day average decreases and sell if 50-day average increases
 // If both conditions are met, prioritize sell
-  final case object Rule5 extends conditionActionRule {
+  final case object Rule5 extends ConditionActionRule {
         override def eval(stockPrice: Double, marketState: List[Int], cash: Double, shares: Double): Int ={
         if (marketState(2) == 1 && shares >= 1){
             sell
