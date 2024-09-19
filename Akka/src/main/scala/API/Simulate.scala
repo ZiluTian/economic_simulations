@@ -20,8 +20,17 @@ object Simulate {
         val name: String = conf("name").asInstanceOf[String]
         val dataConf: String = conf("data").asInstanceOf[String]
 
-        val workersPerMachine: Int = ConfigFactory.load("driver-worker").getValue("driver-worker.workers-per-machine").render().toInt
-        val totalMachines: Int = ConfigFactory.load("driver-worker").getValue("driver-worker.total-machines").render().toInt
+        val workersPerMachine: Int = if (conf.get("workersPerMachine").isDefined) {
+            conf("workersPerMachine").asInstanceOf[Int] 
+        } else {
+            ConfigFactory.load("driver-worker").getValue("driver-worker.workers-per-machine").render().toInt
+        }
+        
+        val totalMachines: Int = if (conf.get("totalMachines").isDefined) {
+            conf("totalMachines").asInstanceOf[Int]
+        } else {
+            ConfigFactory.load("driver-worker").getValue("driver-worker.total-machines").render().toInt
+        }
         var totalWorkers = workersPerMachine * totalMachines
         
         println(f"${totalMachines} total machines, ${totalWorkers} total workers, and ${actors.size} actors")
