@@ -21,11 +21,11 @@ class stockMarketGraphTest extends scaleUpTest {
     // Other markets are placeholders
     class stockMarketPartition(partId: Int, traders: Int) extends Actor {
         // The role of the placeholder in partitions without market is to perform in-network aggregation and message caching
-        val marketPlaceholder: Int = 1
+        val numMarket: Int = 1
         id = partId
 
         val world: Array[Any] =
-            ((0 until marketPlaceholder).map(i => {
+            ((0 until numMarket).map(i => {
                 val stock = new Stock(0.01)
                 stock.priceAdjustmentFactor = 0.1 / traders
                 Market(stock, stock.updateMarketInfo(initialStockPrice, stock.getDividend), initialStockPrice, 0, 0, 0)
@@ -42,17 +42,17 @@ class stockMarketGraphTest extends scaleUpTest {
                 })
 
                 // Run trader and market agents
-                (marketPlaceholder until traders + marketPlaceholder).foreach(traderIdx => {
-                    (0 until markets).foreach(marketIdx => {
+                (numMarket until traders + numMarket).foreach(traderIdx => {
+                    (0 until numMarket).foreach(marketIdx => {
                         world(traderIdx).asInstanceOf[Trader].wealth.addDividends(world(marketIdx).asInstanceOf[Market].dividendPerShare)
                         world(traderIdx).asInstanceOf[Trader].action = world(traderIdx).asInstanceOf[Trader].wealth.takeAction(world(marketIdx).asInstanceOf[Market].stockPrice, world(marketIdx).asInstanceOf[Market].marketState)
                     })
                     world(traderIdx).asInstanceOf[Trader].wealth.addInterest()
                 })
                 // Each market gets the number of buy and sell orders from traders and computes the new stock price
-                (0 until markets).foreach(marketIdx => {
+                (0 until numMarket).foreach(marketIdx => {
                     // get the number of buys and sells from traders
-                    (markets until traders + markets).foreach(traderIdx => {
+                    (numMarket until traders + numMarket).foreach(traderIdx => {
                         if (world(traderIdx).asInstanceOf[Trader].action == buy) {
                             world(marketIdx).asInstanceOf[Market].buyOrders += 1
                         } else if (world(traderIdx).asInstanceOf[Trader].action == sell) {
@@ -92,9 +92,9 @@ class stockMarketGraphTest extends scaleUpTest {
                     world(0).asInstanceOf[Market].dividendPerShare = marketMessage(1)
                     world(0).asInstanceOf[Market].marketState = List(marketMessage(2).toInt, marketMessage(3).toInt, marketMessage(4).toInt)
                 })
-                (1 until traders + marketPlaceholder).foreach(traderIdx => {
+                (1 until traders + numMarket).foreach(traderIdx => {
                     // Partially aggregate the result in market placeholders 
-                    (0 until marketPlaceholder).foreach(marketIdx => {
+                    (0 until numMarket).foreach(marketIdx => {
                         world(traderIdx).asInstanceOf[Trader].wealth.addDividends(world(marketIdx).asInstanceOf[Market].dividendPerShare)
                         world(traderIdx).asInstanceOf[Trader].action = world(traderIdx).asInstanceOf[Trader].wealth.takeAction(world(marketIdx).asInstanceOf[Market].stockPrice, world(marketIdx).asInstanceOf[Market].marketState)
                         if (world(traderIdx).asInstanceOf[Trader].action == buy) {
