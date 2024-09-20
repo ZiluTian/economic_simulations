@@ -33,8 +33,8 @@ class gameOfLifeGraphTest extends scaleUpTest {
                         i <- -1 to 1
                         j <- -1 to 1
                         if !(i == 0 && j == 0)
-                            dx = col + i
-                            dy = (row + j + width) % width
+                            dx = row + i
+                            dy = (col + j + width) % width
                     } {
                         if (readOnly(dx)(dy)) {
                             totalAlive += 1
