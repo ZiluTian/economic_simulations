@@ -106,12 +106,13 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
 
 class ERMGraphTest extends EpidemicsGraphTest {
     val p: Double = 0.01
-    def gen(components: Int): IndexedSeq[Actor] = {
-        val graph = GraphFactory.erdosRenyi(components * baseFactor, p)
+
+    def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
+        val graph = GraphFactory.erdosRenyi(scaleUpFactor * baseFactor, p)
         val people: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
-        partition(graph, components).zipWithIndex.map(i => {
+        partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
             new partActor(i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, people(j))).toMap)
-        })
+        }).toVector
     }
 }
 
@@ -120,12 +121,11 @@ class SBMGraphTest extends  EpidemicsGraphTest {
     val q: Double = 0
     val numBlocks: Int = 5
 
-    def gen(components: Int): IndexedSeq[Actor] = {
-        val graph = GraphFactory.erdosRenyi(components * baseFactor, p)
+    def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
+        val graph = GraphFactory.erdosRenyi(scaleUpFactor * baseFactor, p)
         val people: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
-
-        partition(graph, components).zipWithIndex.map(i => {
+        partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
             new partActor(i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, people(j))).toMap)
-        })
+        }).toVector
     }
 }

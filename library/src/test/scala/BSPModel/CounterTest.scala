@@ -3,41 +3,12 @@ package test
 
 import scala.util.Random
 import cloudcity.lib.Graph._
+import BSPModel.example.counter._
+import BSPModel.Connector._
 
 class CounterTest extends BSPBenchSuite {
     val totalRounds = 5
     val experimentName = "CounterTest"
-
-    trait CounterCompute extends ComputeMethod {
-        type State = Int
-        type Message = Int
-
-        def partialCompute(m1: Iterable[Int]): Option[Int] = {
-            if (m1.isEmpty) {
-                None
-            } else {
-                Some(m1.sum)
-            }
-        }
-
-        def updateState(s: Int, m: Option[Int]): Int = {
-            m match {
-                case None => s
-                case Some(x) =>
-                    s + x
-            }
-        }
-
-        def stateToMessage(s: Int): Int = {
-            s
-        }
-    }
-
-    class Cell(pos: BSPId, neighbors: Seq[BSPId]) extends BSP with CounterCompute {
-        var state: Int = 1
-        override val id = pos
-        val receiveFrom = FixedCommunication(neighbors) 
-    } 
 
     test("Counter should increse its value in every round") {
         val width = 100

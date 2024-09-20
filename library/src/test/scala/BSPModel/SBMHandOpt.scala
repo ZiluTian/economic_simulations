@@ -3,6 +3,8 @@ package test
 
 import scala.util.Random
 import cloudcity.lib.Graph._
+import BSPModel.Connector._
+import BSPModel.example.epidemics._
 
 class handOptSBMTest extends BSPBenchSuite {
 
@@ -10,22 +12,14 @@ class handOptSBMTest extends BSPBenchSuite {
     val totalRounds: Int = 50
     val experimentName: String = "SBM (graph-centric)"
     
-    case class Person(val age: Int, 
-                    val neighbors: Iterable[Int], 
-                    val symptomatic: Boolean,
-                    var health: Int,
-                    var vulnerability: Int, 
-                    var daysInfected: Int, 
-                    var risk: Double) 
-
     test(f"The hand-optimized $experimentName example"){
         List(1000, 10000, 100000).foreach(population => {
             writer.write(f"Config: population ${population} rounds ${totalRounds}\n")
 
             val graph = toGraphInt(GraphFactory.stochasticBlock(population, connectivity, 0, 5).adjacencyList())
-            var readOnly: Array[Person] = (0 until population).map(i => {
+            var readOnly: Array[PersonCell] = (0 until population).map(i => {
                 val age: Int = Random.nextInt(90)+10
-                Person(age, 
+                PersonCell(age, 
                     graph.getOrElse(i, List()), 
                     Random.nextBoolean(), 
                     if (Random.nextInt(100)==0) 0 else 2,
@@ -45,8 +39,8 @@ class handOptSBMTest extends BSPBenchSuite {
                             // use reduce instead of combine, to allow for stateful updates, where the 
                             // initial value passed to reduce is stateful
                             
-                            health = person.neighbors.map(i => readOnly(i)).foldLeft(health)((x, y) => {
-                                var personalRisk = y.risk
+                            health = person.neighbors.view.map(i => readOnly(i).risk).foldLeft(health)((x, y) => {
+                                var personalRisk = y
                                 if (person.age > 60) {
                                     personalRisk = 2 * personalRisk
                                 }

@@ -3,6 +3,7 @@ package test
 
 import cloudcity.lib.Graph
 import scala.util.Random
+import BSPModel.Connector._
 
 class BSPBenchUtilSpec extends BSPModel.test.BSPBenchSuite {
 

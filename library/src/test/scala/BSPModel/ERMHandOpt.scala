@@ -3,6 +3,7 @@ package test
 
 import scala.util.Random
 import cloudcity.lib.Graph._
+import BSPModel.Connector._
 
 class handOptERMTest extends BSPBenchSuite {
 
@@ -36,8 +37,11 @@ class handOptERMTest extends BSPBenchSuite {
 
             var readWrite = readOnly.clone
 
-            benchmarkTool[Unit](writer, {
-                Range(1, totalRounds).foreach(_ => {
+            benchmarkTool[Unit]({
+                Range(0, totalRounds).foreach(_ => {
+                    // val summary = readOnly.map(i => i.asInstanceOf[Person]).groupBy(i => i.health).map(i => (i._1, i._2.size))
+                    // println(f"Summary: ${summary}")
+
                     readOnly.zipWithIndex.foreach(pair => {
                         val person = pair._1
                         var health = person.health 

@@ -37,59 +37,31 @@ class PersonAgent(pos: BSPId, initHealth: Int, neighbors: Seq[BSPId]) extends BS
     override val id = pos
     val receiveFrom = FixedCommunication(neighbors) 
 
-    // A helper method
-    def partialComputeStateful(ms: Iterable[Double], s: Person): Person = {
-        println(f"Partial compute stateful is invoked with ${ms}")
+    def statefulFold(ms: Iterable[Double]): Unit = {
         ms match {
             case Nil => 
             case _ => 
                 ms.foreach(risk => {
-                    var personalRisk = risk
-                    if (s.age > 60) {
+                    var personalRisk = stateToMessage(state)
+                    if (state.age > 60) {
                         personalRisk = personalRisk * 2
                     }
                     if (personalRisk > 1) {
-                        s.health = SIRModel.change(s.health, s.vulnerability)
+                        state.health = SIRModel.change(state.health, state.vulnerability)
                     }
                 })
         }
-        s
     }
 
-    def partialCompute(ms: Iterable[Double]): Option[Double] = {
-        println(f"Partial compute is invoked with ${ms}")
-        val stackTrace = Thread.currentThread().getStackTrace
-        if (stackTrace.length > 3) {
-            val callerElement = stackTrace(3)  // The immediate caller
-            // println(s"Called from method: ${callerMethod.getMethodName}")
-            // Extract detailed information
-            val fullClassName = callerElement.getClassName  // full class name including package
-            val methodName = callerElement.getMethodName    // method name
-            val fileName = callerElement.getFileName        // file name where the method is defined
-            val lineNumber = callerElement.getLineNumber    // line number in the file
-
-            println(s"Called from method: $methodName in class: $fullClassName (file: $fileName, line: $lineNumber)")
-
-        } else {
-            println("Unable to trace the caller")
-        }
-        
-        state = partialComputeStateful(ms, state)
-        None
-    }
-    
+    // expression for updating the state, NOT in-place update
     def updateState(person: Person, m: Option[Double]): Person = {
-        println(f"Update state is invoked with ${m}")
         if (person.health != SIRModel.Deceased) {
-            // person.health = state.health
             m match {
                 case None => 
                 case Some(risk) => 
-                    println("This should not be printed!")
-                    partialCompute(List(risk))
+                    statefulFold(List(risk))
                 }
 
-            // person.health = state.health
             if ((person.health != SIRModel.Susceptible) && (person.health != SIRModel.Recover)) {
                 if (person.daysInfected >= SIRModel.stateDuration(person.health)) {            
                     person.health = SIRModel.change(person.health, person.vulnerability)  
@@ -98,8 +70,26 @@ class PersonAgent(pos: BSPId, initHealth: Int, neighbors: Seq[BSPId]) extends BS
                 }
             } 
         } 
-        // state.health = person.health
         person
+    }
+
+    def partialCompute(ms: Iterable[Double]): Option[Double] = {
+        statefulFold(ms)
+        None
+        // println(f"Partial compute is invoked with ${ms}")
+        // val stackTrace = Thread.currentThread().getStackTrace
+        // if (stackTrace.length > 3) {
+        //     val callerElement = stackTrace(3)  // The immediate caller
+        //     // println(s"Called from method: ${callerMethod.getMethodName}")
+        //     // Extract detailed information
+        //     val fullClassName = callerElement.getClassName  // full class name including package
+        //     val methodName = callerElement.getMethodName    // method name
+        //     val fileName = callerElement.getFileName        // file name where the method is defined
+        //     val lineNumber = callerElement.getLineNumber    // line number in the file
+        //     println(s"Called from method: $methodName in class: $fullClassName (file: $fileName, line: $lineNumber)")
+        // } else {
+        //     println("Unable to trace the caller")
+        // }
     }
 
     def stateToMessage(s: Person): Double = {
