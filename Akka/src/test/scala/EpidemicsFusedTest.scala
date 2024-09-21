@@ -22,7 +22,8 @@ abstract class EpidemicsFusedTest extends scaleUpTest {
             receivedMessages.foreach(i => {
                 part.topo.asInstanceOf[ArrayGraph[BSPId]].inCache(i.asInstanceOf[DoubleVectorMessage].value(0).toInt) = i.asInstanceOf[DoubleVectorMessage].value.tail
             })
-
+            receivedMessages.clear()
+            
             fusedGraphAgent.run(List())
 
             part.topo.outIntVertices.foreach(i => {

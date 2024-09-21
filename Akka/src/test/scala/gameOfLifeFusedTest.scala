@@ -20,7 +20,8 @@ class gameOfLifeFusedTest extends scaleUpTest {
             receivedMessages.foreach(i => {
                 part.topo.asInstanceOf[ArrayGraph[BSPId]].inCache(i.asInstanceOf[IntVectorMessage].value(0)) = i.asInstanceOf[IntVectorMessage].value.tail
             })
-
+            receivedMessages.clear()
+            
             fusedGraphAgent.run(List())
 
             part.topo.outIntVertices.foreach(i => {

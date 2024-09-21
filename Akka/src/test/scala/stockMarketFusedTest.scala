@@ -22,6 +22,7 @@ class stockMarketFusedTest extends scaleUpTest {
             receivedMessages.foreach(i => {
                 part.topo.asInstanceOf[ArrayGraph[BSPId]].inCache(i.asInstanceOf[DoubleVectorMessage].value(0).toInt) = i.asInstanceOf[DoubleVectorMessage].value.tail
             })
+            receivedMessages.clear()
 
             fusedGraphAgent.run(List())
 
@@ -30,7 +31,7 @@ class stockMarketFusedTest extends scaleUpTest {
                     DoubleVectorMessage(part.id.toDouble +: 
                         i._2.flatMap(j => 
                             fusedGraphAgent.state.asInstanceOf[Array[BSP with ComputeMethod with Stage with DoubleBuffer]](j.asInstanceOf[Int]).asInstanceOf[BSP with ComputeMethod with Stage with DoubleBuffer].publicState match {
-                                case x: Int => Vector(x.toDouble)
+                                case x: (Int, Int) => Vector(x._1.toDouble, x._2.toDouble)
                                 case x: Vector[Double] => x
                                 case _ => throw new Exception("Unfound msg type!")
                             })))
