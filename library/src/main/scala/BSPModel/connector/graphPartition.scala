@@ -99,24 +99,24 @@ object Connector {
 
         // unvisited edges are cross-partition edges
         partitionedVertices.map(x => {
-            var in = MutMap[Int, Vector[BSPId]]().withDefaultValue(Vector[BSPId]())
-            var out = MutMap[Int, Vector[BSPId]]().withDefaultValue(Vector[BSPId]())
+            var in = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+            var out = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
 
             unvisitedEdges.foreach {
                 case (src, dst) if x.contains(src) && !x.contains(dst) =>
                     val partId = indexedVertex(dst)
-                    out.update(partId, out(partId) :+ src)
+                    out.update(partId, out(partId)+src)
                 case (src, dst) if x.contains(dst) && !x.contains(src) => 
                     val partId = indexedVertex(src)
-                    in.update(partId, in(partId) :+ src)
+                    in.update(partId, in(partId)+src)
                 case _ => 
             }
             
             new BSPModel.Graph[BSPId] {
                 val vertices: Set[BSPId] = x
                 val edges: Map[Int, Vector[BSPId]] = Map()
-                val inExtVertices: Map[Int, Vector[BSPId]] = in.map(i => (i._1, i._2.sorted)).toMap
-                val outIntVertices: Map[Int, Vector[BSPId]] = out.map(i => (i._1, i._2.sorted)).toMap
+                val inExtVertices: Map[Int, Vector[BSPId]] = in.map(i => (i._1, i._2.toVector.sorted)).toMap
+                val outIntVertices: Map[Int, Vector[BSPId]] = out.map(i => (i._1, i._2.toVector.sorted)).toMap
             }
         })
     }
