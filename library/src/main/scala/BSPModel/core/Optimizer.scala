@@ -31,7 +31,17 @@ case object RefineCommunication extends Optimizer[
             dbg(f"Internal vertices that are sources of outgoing edges are ${part.topo.outIntVertices}")
 
             val id = part.id
-            val topo: Graph[NodeId] = part.topo
+            val bspIds = part.members.map(bsp => bsp.asInstanceOf[BSP].id)
+            val topo: ArrayGraph[NodeId] = new ArrayGraph[NodeId] {
+                    val vertices = part.topo.vertices
+                    val edges = part.topo.edges
+                    val inExtVertices = part.topo.inExtVertices
+                    val outIntVertices = part.topo.outIntVertices.map(i => {
+                        (i._1, i._2.map(j => bspIds.indexOf(j)))
+                    })
+                    val inCache = MutMap[PartitionId, Vector[_ <: Any]]()
+                }
+
             val members: List[Member] = part.members.map(bsp => {
                 ddbg(f"${bsp.id} receives messages from ${bsp.receiveFrom.mkString(", ")}")
                 assert(part.topo.vertices.contains(bsp.id))
@@ -64,7 +74,7 @@ case object StageRemoteCommunication extends Optimizer[
 
             val id = part.id
             // pad with inCache
-            val topo: ArrayGraph[BSPId] = ArrayGraph.fromGraph(part.topo)
+            val topo: ArrayGraph[BSPId] = part.topo.asInstanceOf[ArrayGraph[BSPId]]
             dbg(f"Topo inExtVertices is ${topo.inExtVertices}")
 
             val members: List[Member] = part.members.map(bspIt => {
@@ -92,17 +102,18 @@ case object StageRemoteCommunication extends Optimizer[
                                     private val receiveRemote: Iterable[(PartitionId, Int)] = 
                                         topo.inExtVertices.map(k => (k._1, k._2.intersect(remoteIds.toVector))).filter(i => !i._2.isEmpty).toVector.flatMap(i => i._2.map(j => (i._1, topo.inExtVertices(i._1).indexOf(j))))
 
-                                    // dbg(f"Remote ids are $remoteIds local indices are $receiveRemote")
+                                    dbg(f"Receive remote is $receiveRemote")
                                     assert(remoteIds.size == receiveRemote.size)
                                         // remoteIds.map(i => topo.asInstanceOf[ArrayGraph[BSPId]].getInboxCacheIndex(i).get)
                                     override def compile(): Option[Message] = {
                                         var tmp: List[bsp.InMessage] = List()
                                         receiveRemote.foreach(i => {
+                                            dbg(f"Topo incache has value ${topo.inCache.get(i._1)}")
                                             if (topo.inCache.get(i._1).isDefined && topo.inCache(i._1).size >= i._2) {
                                                 tmp = topo.inCache(i._1)(i._2).asInstanceOf[bsp.InMessage] :: tmp
                                             }
                                         })
-                                        // dbg("Call partial compute by compiling away received remote!")
+                                        dbg(f"$id calls partial compute by compiling away received remote!")
                                         partialCompute(tmp)
                                     }
                                     // ddbg("Receive from contains remote values " + receiveRemote)
@@ -139,15 +150,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                 type Member = BSP with ComputeMethod
 
                 val id = part.id
-                val topo: ArrayGraph[NodeId] = new ArrayGraph[NodeId] {
-                    val vertices = part.topo.vertices
-                    val edges = part.topo.edges
-                    val inExtVertices = part.topo.inExtVertices
-                    val outIntVertices = part.topo.outIntVertices.map(i => {
-                        (i._1, i._2.map(j => bspIds.indexOf(j)))
-                    })
-                    val inCache = MutMap[PartitionId, Vector[_ <: Any]]()
-                }
+                val topo: ArrayGraph[BSPId] = part.topo.asInstanceOf[ArrayGraph[BSPId]]
 
                 def genNewBSP(bsp: BSP with ComputeMethod with Stage, receiveFromLocal: Iterable[BSPId]): BSP with ComputeMethod with DoubleBuffer with Stage = 
                     new BSP with ComputeMethod with Stage with DoubleBuffer { selfBSP => 
@@ -172,7 +175,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                                     // ddbg(selfBSP.id + " receive local values are " + receiveLocal.mkString(" ,"))
 
                                     override def compile(): Option[Message] = {
-                                        // dbg("Call partial compute by compiling away locals!")
+                                        dbg(f"$id calls partial compute by compiling away locals!")
                                         // assert(receiveLocal.size > 0)
                                         selfBSP.partialCompute(receiveLocal.map(i => members.head.state.asInstanceOf[(Array[BSP with ComputeMethod with Stage with DoubleBuffer])](i).publicState.asInstanceOf[Message]))
                                     }
