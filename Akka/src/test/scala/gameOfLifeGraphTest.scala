@@ -25,6 +25,7 @@ class gameOfLifeGraphTest extends scaleUpTest {
                     readOnly(height+1) = i.asInstanceOf[BoolVectorMessage].value.tail.toArray
                 }
             })
+            receivedMessages.clear()
 
             (1 until height).foreach(row => {
                 (0 until width).foreach(col => {

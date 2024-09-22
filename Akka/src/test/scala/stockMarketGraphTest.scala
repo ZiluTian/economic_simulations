@@ -40,7 +40,7 @@ class stockMarketGraphTest extends scaleUpTest {
                     world(0).asInstanceOf[Market].buyOrders += i.asInstanceOf[DoubleVectorMessage].value(0).toInt
                     world(0).asInstanceOf[Market].sellOrders += i.asInstanceOf[DoubleVectorMessage].value(1).toInt
                 })
-
+                receivedMessages.clear()
                 // Run trader and market agents
                 (numMarket until traders + numMarket).foreach(traderIdx => {
                     (0 until numMarket).foreach(marketIdx => {

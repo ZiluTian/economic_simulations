@@ -31,7 +31,8 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
                     receivedValues.update(inExtVertices(rpart)(j._2), j._1)
                 }) 
             })
-
+            receivedMessages.clear()
+            
             readOnly.foreach(pair => {
                 val person = pair._2
                 var health = person.health 
