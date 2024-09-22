@@ -26,7 +26,7 @@ case class Person(val age: Int,
 class PersonAgent(pos: BSPId, initHealth: Int, neighbors: Seq[BSPId]) extends BSP with ComputeMethod {
     type State = Person
     type InMessage = Double // risk of being infected
-    type OutMessage = Double
+    type SerializeFormat = Double
 
     val age: Int = Random.nextInt(90)+10
     var state: Person = Person(age, 
@@ -104,7 +104,7 @@ class PersonAgent(pos: BSPId, initHealth: Int, neighbors: Seq[BSPId]) extends BS
 // trait ERMCompute extends ComputeMethod {
 //     type State = Person
 //     type Message = Double // risk of being infected
-//     type OutMessage = Double
+//     type SerializeFormat = Double
     
 //     def partialCompute(m1: Iterable[List[Double]]): Option[List[Double]] = {
 //         m1 match {
@@ -156,7 +156,7 @@ class PersonAgent(pos: BSPId, initHealth: Int, neighbors: Seq[BSPId]) extends BS
 // class PersonAgent(pos: BSPId, initHealth: Int, neighbors: Seq[BSPId]) extends BSP with StatefulComputeMethod {
 //     type State = Person
 //     type InMessage = Double // risk of being infected
-//     type OutMessage = Double
+//     type SerializeFormat = Double
 
 //     val age: Int = Random.nextInt(90)+10
 //     var state: Person = Person(age, 

@@ -87,8 +87,8 @@ case object StageRemoteCommunication extends Optimizer[
 
                         type State = bsp.State
                         type InMessage = bsp.InMessage
-                        type OutMessage = bsp.OutMessage
-                        
+                        type SerializeFormat = bsp.SerializeFormat
+
                         var state = bsp.state
                         val id = bsp.id
                         val receiveFrom = bsp.receiveFrom
@@ -110,7 +110,7 @@ case object StageRemoteCommunication extends Optimizer[
                                         receiveRemote.foreach(i => {
                                             dbg(f"Topo incache has value ${topo.inCache.get(i._1)}")
                                             if (topo.inCache.get(i._1).isDefined && topo.inCache(i._1).size >= i._2) {
-                                                tmp = topo.inCache(i._1)(i._2).asInstanceOf[bsp.InMessage] :: tmp
+                                                tmp = bsp.deserialize(topo.inCache(i._1)(i._2).asInstanceOf[bsp.SerializeFormat]) :: tmp
                                             }
                                         })
                                         dbg(f"$id calls partial compute by compiling away received remote!")
@@ -121,10 +121,11 @@ case object StageRemoteCommunication extends Optimizer[
                             } else {
                                 List()
                             }
-
+                        
+                        override def deserialize(m: SerializeFormat): InMessage = bsp.deserialize(m)
                         def partialCompute(ms: Iterable[InMessage]): Option[InMessage] = bsp.partialCompute(ms)
                         def updateState(s: State, m: Option[InMessage]): State = bsp.updateState(s, m)
-                        def stateToMessage(s: State): OutMessage = bsp.stateToMessage(s)
+                        def stateToMessage(s: State): SerializeFormat = bsp.stateToMessage(s)
                 }
                 (genNewBSP(), (bspIt._2._1, remoteIds))
             })
@@ -157,7 +158,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
 
                         type State = bsp.State
                         type InMessage = bsp.InMessage
-                        type OutMessage = bsp.OutMessage
+                        type SerializeFormat = bsp.SerializeFormat
 
                         var state = bsp.state
                         var publicState = bsp.stateToMessage(bsp.state)
@@ -177,16 +178,23 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                                     override def compile(): Option[Message] = {
                                         dbg(f"$id calls partial compute by compiling away locals!")
                                         // assert(receiveLocal.size > 0)
-                                        selfBSP.partialCompute(receiveLocal.map(i => members.head.state.asInstanceOf[(Array[BSP with ComputeMethod with Stage with DoubleBuffer])](i).publicState.asInstanceOf[Message]))
+                                        selfBSP.partialCompute(
+                                            receiveLocal.map(i => 
+                                                selfBSP.deserialize(
+                                                    members.head.state.asInstanceOf[(Array[BSP with ComputeMethod with Stage with DoubleBuffer])](i)
+                                                    .publicState.asInstanceOf[selfBSP.SerializeFormat])
+                                                )
+                                        )
                                     }
                                 } :: bsp.stagedComputation
                             } else {
                                 bsp.stagedComputation
                             }
 
+                        override def deserialize(m: SerializeFormat): InMessage = bsp.deserialize(m)
                         def partialCompute(ms: Iterable[InMessage]): Option[InMessage] = bsp.partialCompute(ms)
                         def updateState(s: State, m: Option[InMessage]): State = bsp.updateState(s, m)
-                        def stateToMessage(s: State): OutMessage = bsp.stateToMessage(s)
+                        def stateToMessage(s: State): SerializeFormat = bsp.stateToMessage(s)
                 }
 
                 // merged BSP no longer has a publicState for other BSPs
@@ -199,8 +207,8 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                     // This restricts fuse operation to each partition
                     // Cannot fuse different parts of a partition separately
                     val receiveFrom = part.topo.inExtVertices.keySet
-                    type InMessage = Vector[Double]
-                    type OutMessage = Vector[Double]
+                    type InMessage = Vector[Vector[Double]]
+                    type SerializeFormat = Vector[Vector[Double]]
 
                     var state: State = (part.members.map(b => genNewBSP(b._1.asInstanceOf[BSP with ComputeMethod with Stage], b._2._1)).toArray.asInstanceOf[Array[BSP with ComputeMethod with Stage with DoubleBuffer]])
 
@@ -210,7 +218,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                     def updateState(s: State, m: Option[InMessage]): State = ???
 
                     // Need to generate different messages for different partitions. Leave it to runtime
-                    def stateToMessage(s: State): OutMessage = ???
+                    def stateToMessage(s: State): SerializeFormat = ???
                     def partialCompute(ms: Iterable[InMessage]): Option[InMessage] = ???
 
                     // in-place update to each BSP inside

@@ -7,7 +7,7 @@ import meta.API.{SimulationData, DeforestationStrategy}
 import cloudcity.lib.Graph._
 import BSPModel._
 import scala.util.Random
-import meta.runtime.{DoubleVectorMessage, Actor}
+import meta.runtime.{DoubleVectorVectorMessage, Actor}
 import BSPModel.example.stockMarket._
 import BSPModel.Connector._
 
@@ -16,11 +16,11 @@ class stockMarketFusedTest extends scaleUpTest {
     class partActor(part: BSPModel.Partition) extends Actor {
         id = part.id.toLong
         val fusedGraphAgent = part.members.head.asInstanceOf[BSP with ComputeMethod]
-
         // Use List[Double] as the interface message type
         override def run(): Int = {
             receivedMessages.foreach(i => {
-                part.topo.asInstanceOf[ArrayGraph[BSPId]].inCache(i.asInstanceOf[DoubleVectorMessage].value(0).toInt) = i.asInstanceOf[DoubleVectorMessage].value.tail
+                // println(f"$id receives message $i")
+                part.topo.asInstanceOf[ArrayGraph[BSPId]].inCache(i.asInstanceOf[DoubleVectorVectorMessage].value(0).head.toInt) = i.asInstanceOf[DoubleVectorVectorMessage].value.tail
             })
             receivedMessages.clear()
 
@@ -28,12 +28,14 @@ class stockMarketFusedTest extends scaleUpTest {
 
             part.topo.outIntVertices.foreach(i => {
                 sendMessage(i._1, 
-                    DoubleVectorMessage(part.id.toDouble +: 
-                        i._2.flatMap(j => 
+                    DoubleVectorVectorMessage(Vector(part.id.toDouble) +: 
+                        i._2.map(j => 
                             fusedGraphAgent.state.asInstanceOf[Array[BSP with ComputeMethod with Stage with DoubleBuffer]](j.asInstanceOf[Int]).asInstanceOf[BSP with ComputeMethod with Stage with DoubleBuffer].publicState match {
-                                case x: (Int, Int) => Vector(x._1.toDouble, x._2.toDouble)
+                                case x: Double => Vector(x)
                                 case x: Vector[Double] => x
-                                case _ => throw new Exception("Unfound msg type!")
+                                case _ => 
+                                    // println(f"The public state value is ${fusedGraphAgent.state.asInstanceOf[Array[BSP with ComputeMethod with Stage with DoubleBuffer]](j.asInstanceOf[Int]).asInstanceOf[BSP with ComputeMethod with Stage with DoubleBuffer].publicState}")
+                                    throw new Exception("Unfound msg type!")
                             })))
             })
             1

@@ -14,7 +14,7 @@ trait BSP {
         state = run(state, ms)
     }
 
-    def message(): OutMessage = {
+    def message(): SerializeFormat = {
         stateToMessage(state)
     }
 }

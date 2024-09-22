@@ -57,6 +57,10 @@ case class IntVectorMessage(value: Vector[Int]) extends Message
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 case class DoubleVectorMessage(value: Vector[Double]) extends Message
 
+@JsonTypeName("doubleVectorVectorMessage")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+case class DoubleVectorVectorMessage(value: Vector[Vector[Double]]) extends Message
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
   Array(

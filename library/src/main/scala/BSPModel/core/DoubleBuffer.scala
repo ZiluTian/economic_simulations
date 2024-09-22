@@ -4,7 +4,7 @@ package BSPModel
 // todo: restrict publicState to have read-only access to other BSPs but read-write only by the owner BSP
 trait DoubleBuffer {
     this: BSP with ComputeMethod with Stage =>
-    var publicState: OutMessage
+    var publicState: SerializeFormat
     
     def updatePublicState(): Unit = {
         publicState = stateToMessage(state)

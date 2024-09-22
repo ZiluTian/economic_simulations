@@ -5,7 +5,7 @@ package counter
 trait CounterCompute extends ComputeMethod {
     type State = Int
     type InMessage = Int
-    type OutMessage = Int
+    type SerializeFormat = Int
 
     def partialCompute(m1: Iterable[Int]): Option[Int] = {
         if (m1.isEmpty) {

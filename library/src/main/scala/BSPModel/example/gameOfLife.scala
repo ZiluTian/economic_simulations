@@ -7,8 +7,8 @@ import scala.util.Random
 trait GoLCompute extends ComputeMethod {
     type State = Boolean
     type InMessage = Int
-    type OutMessage = Int
-    
+    type SerializeFormat = Int
+
     def partialCompute(m1: Iterable[Int]): Option[Int] = {
         // println(f"Messages received are ${m1}")
         m1 match {
@@ -33,7 +33,7 @@ trait GoLCompute extends ComputeMethod {
         }
     }
 
-    def stateToMessage(s: Boolean): Int = {
+    def stateToMessage(s: Boolean): SerializeFormat = {
         if (s) 1 else 0
     }
 }

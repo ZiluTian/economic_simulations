@@ -3,16 +3,20 @@ package BSPModel
 trait ComputeMethod {
     type State
     type InMessage
-    type OutMessage
-    // type Delta
+    type SerializeFormat
 
-    def stateToMessage(s: State): OutMessage
+    def stateToMessage(s: State): SerializeFormat
     def partialCompute(ms: Iterable[InMessage]): Option[InMessage]
     // def partialComputeWithDelta(ms: Iterable[InMessage], delta: Delta): Delta
     // def updateStateWithDelta(s: State, delta: Delta): State
     // def updateStateWithPartialCompute(s: State, m: Option[InMessage]): State
     def updateState(s: State, m: Option[InMessage]): State
     
+    // override as appropriate
+    def deserialize(x: SerializeFormat): InMessage = x.asInstanceOf[InMessage]
+
+    // def serialize(x: SerializeFormat): SerializeOut = x.asInstanceOf[SerializeOut]
+
     def run(state: State, ms: Iterable[InMessage]): State = {
         updateState(state, partialCompute(ms))
     }
