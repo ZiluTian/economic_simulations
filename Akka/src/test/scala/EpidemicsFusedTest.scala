@@ -35,7 +35,13 @@ abstract class EpidemicsFusedTest extends scaleUpTest {
 
     def genPopulation(g: Map[Int, Iterable[Int]]): Map[Int, BSP with ComputeMethod] = {
         g.map(i => {
-            (i._1, new PersonAgent(i._1, if (Random.nextInt(100)==0) 0 else 2, i._2.toSeq))
+            val age: Int = Random.nextInt(90)+10
+            (i._1, new PersonAgent(i._1, 
+                    age, 
+                    i._2.toVector, 
+                    Random.nextBoolean(), 
+                    if (Random.nextInt(100)==0) 0 else 2,
+                    if (age > 60) 1 else 0))
         })
     }
 }

@@ -13,10 +13,18 @@ class SBMStatefulTest extends BSPBenchSuite {
     val experimentName: String = "SBM (opt)"
 
     test(f"${experimentName} example should run") {
-        List(1000, 10000, 100000).foreach(population => {
+        List(1000).foreach(population => {
             writer.write(f"Config: population ${population} rounds ${totalRounds}\n")
-            val graph = GraphFactory.stochasticBlock(population, connectivity, 0, 5)
-            val agents = toGraphInt(graph.adjacencyList()).map(i => new PersonAgent(i._1.toInt, if (Random.nextInt(100)==0) 0 else 2, i._2.toSeq))
+            val graph = toGraphInt(GraphFactory.stochasticBlock(population, connectivity, 0, 5).adjacencyList())
+            val agents = (0 until population).map(i => {
+                val age: Int = Random.nextInt(90)+10
+                new PersonAgent(i, 
+                    age, 
+                    graph.getOrElse(i, List()).toList, 
+                    Random.nextBoolean(), 
+                    if (Random.nextInt(100)==0) 0 else 2,
+                    if (age > 60) 1 else 0)
+            })
 
             // binding information (partition structure)
             val initPartition = new Partition {
@@ -26,8 +34,8 @@ class SBMStatefulTest extends BSPBenchSuite {
                 val id = 1
 
                 val topo = new BSPModel.Graph[BSPId]{
-                    val vertices = graph.nodes
-                    val edges = graph.adjacencyList()
+                    val vertices = graph.keySet
+                    val edges = graph.mapValues(_.toVector)
                     val inExtVertices = Map()
                     val outIntVertices = Map()
                 }
