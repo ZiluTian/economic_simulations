@@ -166,18 +166,18 @@ class stockMarketFusedAggregateTest extends scaleUpTest {
         
         var adjList = Map[Int, List[Int]]()
         // Original market receives from local traders and proxies
-        adjList = adjList + (0 -> ((1 to baseFactor) ++ (1 until scaleUpFactor).map(k => k * baseFactor)).toList)
+        adjList = adjList + (0 -> ((1 until baseFactor) ++ (1 until scaleUpFactor).map(k => k * baseFactor)).toList)
         
-        (1 to baseFactor).foreach(j => {
+        (1 until baseFactor).foreach(j => {
             adjList = adjList + (j -> List(0))
         })
 
         (1 until scaleUpFactor).foreach(i => {
             val j: Int = i * baseFactor
             // Add market proxy
-            adjList = adjList + (j -> ((j+1) to (i+1)*baseFactor).toList)
+            adjList = adjList + (j -> ((j+1) until (i+1)*baseFactor).toList)
             // Traders still receive stock information from the original market
-            ((j+1) to (i+1)*baseFactor).foreach(k => {
+            ((j+1) until (i+1)*baseFactor).foreach(k => {
                 adjList = adjList + (k -> List(0))
             })
         })
@@ -200,7 +200,7 @@ class stockMarketFusedAggregateTest extends scaleUpTest {
                 type Value = BSP
                 val id = i
                 val topo = new BSPModel.Graph[BSPId] {
-                    val vertices = (i*baseFactor to (i+1)*baseFactor).toSet
+                    val vertices = (i*baseFactor until (i+1)*baseFactor).toSet
                     val edges = Map()
                     val inExtVertices = if (i == 0) {
                         // Receive aggregated action from other partitions
@@ -221,7 +221,8 @@ class stockMarketFusedAggregateTest extends scaleUpTest {
                         Map(0 -> Vector(i*baseFactor))
                     }
                 }
-                val members = (i*baseFactor to (i+1)*baseFactor).map(j => cells(j)).toList
+                // println(f"Partition ${i} has vertices ${topo.vertices} ${topo.inExtVertices}")
+                val members = (i*baseFactor until (i+1)*baseFactor).map(j => cells(j)).toList
             }
             BSPModel.Optimize.default(part)
         // partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
