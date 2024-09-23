@@ -69,26 +69,26 @@ class PersonAgent(pos: BSPId,
     def partialCompute(ms: Iterable[Double]): Option[Double] = {
         // println(f"$pos before partial compute is invoked with ${ms} state ${state}")
         var health = state.health
-        ms.foldLeft(health)((x, y) => {
-            var personalRisk = y
-            if (state.age > 60) {
-                personalRisk = 2 * personalRisk
-            }
-            if (personalRisk > 1) {
-                SIRModel.change(health, state.vulnerability)
-            } else {
-                health
-            }
-        })
-        // ms.foreach(risk => {
-        //     var personalRisk = risk
+        // ms.foldLeft(health)((x, y) => {
+        //     var personalRisk = y
         //     if (state.age > 60) {
-        //         personalRisk = personalRisk * 2
+        //         personalRisk = 2 * personalRisk
         //     }
         //     if (personalRisk > 1) {
-        //         health = SIRModel.change(health, state.vulnerability)
+        //         SIRModel.change(health, state.vulnerability)
+        //     } else {
+        //         health
         //     }
         // })
+        ms.foreach(risk => {
+            var personalRisk = risk
+            if (state.age > 60) {
+                personalRisk = personalRisk * 2
+            }
+            if (personalRisk > 1) {
+                health = SIRModel.change(health, state.vulnerability)
+            }
+        })
         Some(health.toDouble)
     }
 

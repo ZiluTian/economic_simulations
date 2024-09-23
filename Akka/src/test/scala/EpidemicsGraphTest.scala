@@ -37,8 +37,8 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
                 val person = pair._2
                 var health = person.health 
                 if (health != SIRModel.Deceased) {
-                    health = person.neighbors.view.map(i => {
-                        if (readOnly.isDefinedAt(i)) {
+                    person.neighbors.foreach(i => {
+                        var personalRisk = if (readOnly.isDefinedAt(i)) {
                             readOnly(i).risk
                         } else if (receivedValues.isDefinedAt(i)) {
                             receivedValues(i)
@@ -48,17 +48,25 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
                         } else {
                             throw new Exception(f"Neighbor ${i} not found in local or remote in partition ${partId}!")
                         }
-                    }).foldLeft(health)((x, y) => {
-                        var personalRisk = y
                         if (person.age > 60) {
-                            personalRisk = 2 * personalRisk
+                            personalRisk = personalRisk * 2
                         }
                         if (personalRisk > 1) {
-                            SIRModel.change(health, person.vulnerability)
-                        } else {
-                            health
+                            health = SIRModel.change(health, person.vulnerability)
                         }
                     })
+                    
+                    // .foldLeft(health)((x, y) => {
+                    //     var personalRisk = y
+                    //     if (person.age > 60) {
+                    //         personalRisk = 2 * personalRisk
+                    //     }
+                    //     if (personalRisk > 1) {
+                    //         SIRModel.change(health, person.vulnerability)
+                    //     } else {
+                    //         health
+                    //     }
+                    // })
 
                     if (health == SIRModel.Infectious) {
                         readWrite(pair._1).risk = SIRModel.infectiousness(health, person.symptomatic)

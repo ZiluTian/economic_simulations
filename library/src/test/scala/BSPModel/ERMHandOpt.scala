@@ -41,28 +41,28 @@ class handOptERMTest extends BSPBenchSuite {
                         if (health != SIRModel.Deceased) {                            
                             // println(f"${pair._2} person before computing has state ${pair._1}")
                             // println(f"${pair._2} person receives values ${person.neighbors.map(i => readOnly(i).risk)}")
-                            health = person.neighbors.map(i => readOnly(i)).foldLeft(health)((x, y) => {
-                                var personalRisk = y.risk
-                                if (person.age > 60) {
-                                    personalRisk = 2 * personalRisk
-                                }
-                                if (personalRisk > 1) {
-                                    SIRModel.change(health, person.vulnerability)
-                                } else {
-                                    health
-                                }
-                            })
-
-                            // The following code assumes the person meets with neighbors one by one
-                            // person.neighbors.foreach(i => {
-                            //     var personalRisk = readOnly(i).risk 
+                            // health = person.neighbors.map(i => readOnly(i)).foldLeft(health)((x, y) => {
+                            //     var personalRisk = y.risk
                             //     if (person.age > 60) {
-                            //         personalRisk = personalRisk * 2
+                            //         personalRisk = 2 * personalRisk
                             //     }
                             //     if (personalRisk > 1) {
-                            //         health = SIRModel.change(health, person.vulnerability)
+                            //         SIRModel.change(health, person.vulnerability)
+                            //     } else {
+                            //         health
                             //     }
                             // })
+
+                            // The following code assumes the person meets with neighbors one by one
+                            person.neighbors.foreach(i => {
+                                var personalRisk = readOnly(i).risk 
+                                if (person.age > 60) {
+                                    personalRisk = personalRisk * 2
+                                }
+                                if (personalRisk > 1) {
+                                    health = SIRModel.change(health, person.vulnerability)
+                                }
+                            })
 
                             if (health == SIRModel.Infectious) {
                                 readWrite(pair._2).risk = SIRModel.infectiousness(health, person.symptomatic)

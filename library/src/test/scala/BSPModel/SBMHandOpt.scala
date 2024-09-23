@@ -38,18 +38,27 @@ class handOptSBMTest extends BSPBenchSuite {
                         if (health != SIRModel.Deceased) {
                             // use reduce instead of combine, to allow for stateful updates, where the 
                             // initial value passed to reduce is stateful
-                            
-                            health = person.neighbors.view.map(i => readOnly(i).risk).foldLeft(health)((x, y) => {
-                                var personalRisk = y
+                            person.neighbors.foreach(i => {
+                                var personalRisk = readOnly(i).risk 
                                 if (person.age > 60) {
-                                    personalRisk = 2 * personalRisk
+                                    personalRisk = personalRisk * 2
                                 }
                                 if (personalRisk > 1) {
-                                    SIRModel.change(health, person.vulnerability)
-                                } else {
-                                    health
+                                    health = SIRModel.change(health, person.vulnerability)
                                 }
                             })
+                                                        
+                            // health = person.neighbors.view.map(i => readOnly(i).risk).foldLeft(health)((x, y) => {
+                            //     var personalRisk = y
+                            //     if (person.age > 60) {
+                            //         personalRisk = 2 * personalRisk
+                            //     }
+                            //     if (personalRisk > 1) {
+                            //         SIRModel.change(health, person.vulnerability)
+                            //     } else {
+                            //         health
+                            //     }
+                            // })
 
                             if (health == SIRModel.Infectious) {
                                 readWrite(pair._2).risk = SIRModel.infectiousness(health, person.symptomatic)
