@@ -34,9 +34,9 @@ class stockMarketFusedAggregateTest extends scaleUpTest {
             if (in.size == 1) {
                 val m = in.head.toInt
                 if (m == buy){
-                    (m, 0)
+                    (1, 0)
                 } else if (m == sell) {
-                    (0, m)
+                    (0, 1)
                 } else {
                     (0, 0)
                 }   
@@ -96,9 +96,9 @@ class stockMarketFusedAggregateTest extends scaleUpTest {
         override def deserialize(in: SerializeFormat): InMessage = {
             val m = in.head.toInt
             if (m == buy){
-                (m, 0)
+                (1, 0)
             } else if (m == sell) {
-                (0, m)
+                (0, 1)
             } else {
                 (0, 0)
             }

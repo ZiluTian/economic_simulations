@@ -70,12 +70,13 @@ class MarketAgent(pos: BSPId, neighbors: Seq[BSPId], initialStockPrice: Double) 
     override val id = pos
     val receiveFrom = FixedCommunication(neighbors) 
 
+    // Transform from Vector[Double] to (Int, Int)
     override def deserialize(in: SerializeFormat): InMessage = {
         val m = in.head.toInt
         if (m == buy){
-            (m, 0)
+            (1, 0)
         } else if (m == sell) {
-            (0, m)
+            (0, 1)
         } else {
             (0, 0)
         }
