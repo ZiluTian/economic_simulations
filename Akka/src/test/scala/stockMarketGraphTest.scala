@@ -92,6 +92,7 @@ class stockMarketGraphTest extends scaleUpTest {
                     world(0).asInstanceOf[Market].dividendPerShare = marketMessage(1)
                     world(0).asInstanceOf[Market].marketState = List(marketMessage(2).toInt, marketMessage(3).toInt, marketMessage(4).toInt)
                 })
+                receivedMessages.clear()
                 (1 until traders + numMarket).foreach(traderIdx => {
                     // Partially aggregate the result in market placeholders 
                     (0 until numMarket).foreach(marketIdx => {
