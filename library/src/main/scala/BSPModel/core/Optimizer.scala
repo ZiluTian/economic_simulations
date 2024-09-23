@@ -91,7 +91,7 @@ case object StageRemoteCommunication extends Optimizer[
 
                         var state = bsp.state
                         val id = bsp.id
-                        val receiveFrom = bsp.receiveFrom
+                        val receiveFrom = bsp.receiveFrom.toList.diff(bspIt._2._1.toList)  // compile local away
 
                         val stagedComputation: List[StagedExpr] = 
                             if (remoteIds.size > 0) {
@@ -151,7 +151,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                 type Member = BSP with ComputeMethod
 
                 val id = part.id
-                val topo: ArrayGraph[BSPId] = part.topo.asInstanceOf[ArrayGraph[BSPId]]
+                val topo = part.topo
 
                 def genNewBSP(bsp: BSP with ComputeMethod with Stage, receiveFromLocal: Iterable[BSPId]): BSP with ComputeMethod with DoubleBuffer with Stage = 
                     new BSP with ComputeMethod with Stage with DoubleBuffer { selfBSP => 
@@ -163,7 +163,7 @@ case object StageAndFuseLocalCommunication extends Optimizer[
                         var state = bsp.state
                         var publicState = bsp.stateToMessage(bsp.state)
                         val id = bsp.id
-                        val receiveFrom = bsp.receiveFrom
+                        val receiveFrom = bsp.receiveFrom.toList.diff(receiveFromLocal.toList)
 
                         val stagedComputation: List[StagedExpr] = 
                             if (receiveFromLocal.size > 0) {
