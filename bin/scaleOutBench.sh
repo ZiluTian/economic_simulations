@@ -19,14 +19,14 @@ driver_port="25000"
 
 # Workers
 worker_ips=(
-    "130.60.194.134"
-    “130.60.194.131”
+    130.60.194.131
+    130.60.194.134
 )
-worker_port="25300"
+worker_port="25500"
 total_machines=${#worker_ips[@]}
 
 # Repeat
-repeat=3
+repeat=2
 
 case $choice in
     0)
