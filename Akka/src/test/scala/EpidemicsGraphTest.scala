@@ -17,9 +17,9 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
 
     class partActor(partId: Int, inExtVertices: Map[Int, Vector[Int]], outIntVertices: Map[Int, Vector[Int]], people: Map[Int, PersonCell]) extends Actor {
         id = partId.toLong
-        var readOnly: Map[BSPId, PersonCell] = people.map(i => (i._1, i._2.clone))
         val receivedValues: MutMap[BSPId, Double] = MutMap[BSPId, Double]()
-        var readWrite = readOnly.map(i => (i._1, i._2.clone))
+        // Cache only the risk attribute, in-place update other attributes only the fly
+        var risks: Map[BSPId, Double] = people.mapValues(i => i.risk)
 
         // println(f"Partition ${partId} incoming external vertices are ${inExtVertices}")
         // println(f"Partition ${partId} outgoing internal vertices are ${outIntVertices}")
@@ -29,17 +29,17 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
                 val rpart = i.asInstanceOf[DoubleVectorMessage].value(0).toInt
                 i.asInstanceOf[DoubleVectorMessage].value.tail.zipWithIndex.foreach(j => {
                     receivedValues.update(inExtVertices(rpart)(j._2), j._1)
-                }) 
+                })
             })
             receivedMessages.clear()
             
-            readOnly.foreach(pair => {
+            people.foreach(pair => {
                 val person = pair._2
                 var health = person.health 
                 if (health != SIRModel.Deceased) {
                     person.neighbors.foreach(i => {
-                        var personalRisk = if (readOnly.isDefinedAt(i)) {
-                            readOnly(i).risk
+                        var personalRisk = if (people.isDefinedAt(i)) {
+                            risks(i)    // read from cached value, not immediately updated values
                         } else if (receivedValues.isDefinedAt(i)) {
                             receivedValues(i)
                         } else if (time == 0) {
@@ -69,24 +69,24 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
                     // })
 
                     if (health == SIRModel.Infectious) {
-                        readWrite(pair._1).risk = SIRModel.infectiousness(health, person.symptomatic)
+                        person.risk = SIRModel.infectiousness(health, person.symptomatic)
                     }
 
                     if ((health != SIRModel.Susceptible) && (health != SIRModel.Recover)) {
                         if (person.daysInfected >= SIRModel.stateDuration(health)) {
                             health = SIRModel.change(health, person.vulnerability)
-                            readWrite(pair._1).daysInfected = 0
+                            person.daysInfected = 0
                         } else {
-                            readWrite(pair._1).daysInfected += 1
+                            person.daysInfected += 1
                         }
                     }
-                    readWrite(pair._1).health = health
+                    person.health = health
                 } 
             })
-            readOnly = readWrite.map(i => (i._1, i._2.clone))
+            risks = people.mapValues(i => i.risk)
 
             outIntVertices.foreach(i => {
-                val message = DoubleVectorMessage(partId.toDouble +: i._2.map(j => readOnly(j).risk).toVector)
+                val message = DoubleVectorMessage(partId.toDouble +: i._2.map(j => risks(j)).toVector)
                 sendMessage(i._1, message)
             })
             1
