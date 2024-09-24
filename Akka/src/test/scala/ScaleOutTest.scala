@@ -13,8 +13,6 @@ import java.io.{File, PrintStream}
 // 10k per machine
 abstract class scaleOutTest extends FlatSpec {
     val baseFactor: Int = 10000
-    val totalRounds: Int = 200
-    val repeat: Int = 3
     val expNameWithDollar: String = getClass.getSimpleName
     val expName: String = expNameWithDollar.substring(0, expNameWithDollar.length -1)
     lazy val file = new File(f"scaleOut$baseFactor/$expName.log")
@@ -27,7 +25,7 @@ abstract class scaleOutTest extends FlatSpec {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor]
 
-    def startDriver(ip: String, port: Int, totalMachines: Int): Unit = {
+    def startDriver(ip: String, port: Int, totalMachines: Int, totalRounds: Int): Unit = {
         val printStream = new PrintStream(file)
         System.setOut(printStream)
         val conf = Map("role" -> "Driver", "ip" -> ip, "port" -> port, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines)            
@@ -36,14 +34,14 @@ abstract class scaleOutTest extends FlatSpec {
         printStream.close()
     }
 
-    def startWorker(ip: String, port: Int, totalMachines: Int, machineId: Int, seed: String): Unit = {
+    def startWorker(ip: String, port: Int, totalMachines: Int, machineId: Int, seed: String, totalRounds: Int): Unit = {
         // println(f"Total machines $totalMachines this machine is $machineId")
         val agents = gen(machineId, totalMachines)
         val conf = Map("role" -> f"Machine-${machineId}", "ip" -> ip, "port" -> port, "seed" -> seed, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines)            
         val ts = API.Simulate(agents, totalRounds, conf)(DeforestationStrategy.NoReduction)
     }
 
-    def exec(args: Array[String]): Unit = {
+    def exec(args: Array[String], totalRounds: Int): Unit = {
         assert(args.size >= 4)
         val role: String = args(0)
         val ip: String = args(1)
@@ -51,19 +49,19 @@ abstract class scaleOutTest extends FlatSpec {
         val totalMachines: Int = args(3).toInt
 
         if (role == "driver") {
-            startDriver(ip, port, totalMachines)
+            startDriver(ip, port, totalMachines, totalRounds)
         } else {
             assert(args.size==6)
             val machineId: Int = args(4).toInt
             val seed: String = args(5)
-            startWorker(ip, port, totalMachines, machineId, seed)
+            startWorker(ip, port, totalMachines, machineId, seed, totalRounds)
         }
     }
 }
 
 object gameOfLifeScaleOutTest extends scaleOutTest with App {
     override def main(args: Array[String]): Unit = {
-        exec(args)
+        exec(args, 200)
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
@@ -97,7 +95,7 @@ object gameOfLifeScaleOutTest extends scaleOutTest with App {
 
 object stockMarketScaleOutTest extends scaleOutTest with App {
     override def main(args: Array[String]): Unit = {
-        exec(args)
+        exec(args, 200)
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
@@ -124,10 +122,8 @@ object stockMarketScaleOutTest extends scaleOutTest with App {
 }
 
 object ERMScaleOutTest extends scaleOutTest with App {
-    override val totalRounds: Int = 50
-
     override def main(args: Array[String]): Unit = {
-        exec(args)
+        exec(args, 50)
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
@@ -146,10 +142,8 @@ object ERMScaleOutTest extends scaleOutTest with App {
 }
 
 object SBMScaleOutTest extends scaleOutTest with App {
-    override val totalRounds: Int = 50
-
     override def main(args: Array[String]): Unit = {
-        exec(args)
+        exec(args, 50)
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
