@@ -10,9 +10,10 @@ import scala.util.Random
 import meta.runtime.{IntVectorMessage, IntArrayMessage, Actor}
 import java.io.{File, PrintStream}
 
-// 10k per machine
+// 50k agents per logical machine
+// 50 workers per logical machine
 abstract class scaleOutTest extends FlatSpec {
-    val baseFactor: Int = 10000
+    val baseFactor: Int = 50000
     val expNameWithDollar: String = getClass.getSimpleName
     val expName: String = expNameWithDollar.substring(0, expNameWithDollar.length -1)
     lazy val file = new File(f"scaleOut$baseFactor/$expName.log")
@@ -65,13 +66,13 @@ object gameOfLifeScaleOutTest extends scaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        assert(baseFactor % totalMachines == 0)
         val width: Int = 100
-        val partSize: Int = baseFactor / totalMachines
-        val height: Int = baseFactor / width
+        val height: Int = baseFactor * totalMachines / width
+        assert((baseFactor * totalMachines) % width == 0)
+        assert(machineId < totalMachines)
 
-        (0L until partSize).map(i => {
-            val idx = partSize * machineId + i
+        (0L until baseFactor).map(i => {
+            val idx = baseFactor * machineId + i
             val cell = if (Random.nextBoolean) {
                 new generated.example.gameOfLife.Cell(1)
             } else {
@@ -99,20 +100,19 @@ object stockMarketScaleOutTest extends scaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        assert(baseFactor % totalMachines == 0)
-        val partSize: Int = baseFactor / totalMachines
+        assert(machineId < totalMachines)
         if (machineId == 0) {
             val market = new generated.example.stockMarket.v2.Market()
             market.id = 0
-            val traders = (1 to partSize).map(i => {
+            val traders = (1 until baseFactor).map(i => {
                 val trader = new generated.example.stockMarket.v2.Trader(1000, 0.001)
                 trader.id = i
                 trader
             })
-            market.connectedAgentIds = (1L to baseFactor)
+            market.connectedAgentIds = (1L until baseFactor * totalMachines)
             Vector(market) ++ traders
         } else {
-            ((partSize * machineId + 1) to (partSize * (machineId + 1))).map(i => {
+            ((baseFactor * machineId) until (baseFactor * (machineId + 1))).map(i => {
                 val trader = new generated.example.stockMarket.v2.Trader(1000, 0.001)
                 trader.id = i
                 trader
@@ -127,15 +127,14 @@ object ERMScaleOutTest extends scaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        assert(baseFactor % totalMachines == 0)
+        assert(machineId < totalMachines)
         val p: Double = 0.01
-        val partSize: Int = baseFactor / totalMachines
 
-        (0L until partSize).map(i => {
-            val idx = partSize * machineId + i
+        (0L until baseFactor).map(i => {
+            val idx = baseFactor * machineId + i
             val cell = new generated.example.epidemic.v2.Person(Random.nextInt(90) + 10)
             cell.id = idx
-            cell.connectedAgentIds = (0L until baseFactor).filter(j => (Random.nextDouble() < p) && (j != idx))
+            cell.connectedAgentIds = (0L until totalMachines * baseFactor).filter(j => (Random.nextDouble() < p) && (j != idx))
             cell
         })
     }
@@ -147,15 +146,15 @@ object SBMScaleOutTest extends scaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        assert(baseFactor % totalMachines == 0)
+        assert(machineId < totalMachines)
         val p: Double = 0.01
-        val partSize: Long = baseFactor / totalMachines
-        (0L until partSize).map(i => {
-            val idx: Long = partSize * machineId + i
+
+        (0L until baseFactor).map(i => {
+            val idx: Long = baseFactor * machineId + i
             val cell = new generated.example.epidemic.v2.Person(Random.nextInt(90) + 10)
             cell.id = idx
             // the number of blocks is total machines. Only connect with neighbors in the same partition
-            cell.connectedAgentIds = (partSize * machineId until partSize * (machineId + 1)).filter(j => (Random.nextDouble() < p) && (j != idx))
+            cell.connectedAgentIds = (baseFactor * machineId.toLong until baseFactor * (machineId + 1)).filter(j => (Random.nextDouble() < p) && (j != idx))
             cell
         })
     }
