@@ -10,11 +10,11 @@ import scala.util.Random
 import meta.runtime.{IntVectorMessage, IntArrayMessage, Actor}
 import java.io.{File, PrintStream}
 
-// 1k per component. Scale up to 100k
+// 10k per machine
 abstract class scaleOutTest extends FlatSpec {
-    val baseFactor: Int = 1000
-    val totalRounds: Int = 20
-    val repeat: Int = 1
+    val baseFactor: Int = 10000
+    val totalRounds: Int = 200
+    val repeat: Int = 3
     val expNameWithDollar: String = getClass.getSimpleName
     val expName: String = expNameWithDollar.substring(0, expNameWithDollar.length -1)
     lazy val file = new File(f"scaleOut$baseFactor/$expName.log")
@@ -25,7 +25,7 @@ abstract class scaleOutTest extends FlatSpec {
         Thread.sleep(100)  // Give GC time to complete
     }
 
-    def gen(partId: Int, totalParts: Int): IndexedSeq[Actor]
+    def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor]
 
     def startDriver(ip: String, port: Int, totalMachines: Int): Unit = {
         val printStream = new PrintStream(file)
@@ -60,22 +60,50 @@ abstract class scaleOutTest extends FlatSpec {
     }
 }
 
-// class gameOfLifeTest extends scaleOutTest {
-//     val width: Int = 100
-//     def gen(x: Int): IndexedSeq[Actor] = {
-//         generated.example.gameOfLife.InitData(width, x*(baseFactor/width).toInt)
-//     }
-// }
+object gameOfLifeScaleOutTest extends scaleOutTest with App {
+    val width: Int = 100
 
-object stockMarketScaleoutTest extends scaleOutTest with App {
     override def main(args: Array[String]): Unit = {
         exec(args)
     }
 
-    def gen(partId: Int, totalParts: Int): IndexedSeq[Actor] = {
-        assert(baseFactor % totalParts == 0)
-        val partSize: Int = baseFactor / totalParts
-        if (partId == 0) {
+    def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
+        assert(baseFactor % totalMachines == 0)
+        val partSize: Int = baseFactor / totalMachines
+        val height: Int = baseFactor / width
+
+        (0L until partSize).map(i => {
+            val idx = partSize * machineId + i
+            val cell = if (Random.nextBoolean) {
+                new generated.example.gameOfLife.Cell(1)
+            } else {
+                new generated.example.gameOfLife.Cell(0)
+            }
+            cell.id = idx
+            val x: Long = idx % width
+            val y: Long = idx / width
+            val neighbors = for {
+                i <- -1 to 1
+                j <- -1 to 1
+                if !(i == 0 && j == 0)
+                    dx = (x + i + width) % width
+                    dy = (y + j + height) % height
+            } yield dy * width + dx
+            cell.connectedAgentIds = neighbors
+            cell
+        })
+    }
+}
+
+object stockMarketScaleOutTest extends scaleOutTest with App {
+    override def main(args: Array[String]): Unit = {
+        exec(args)
+    }
+
+    def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
+        assert(baseFactor % totalMachines == 0)
+        val partSize: Int = baseFactor / totalMachines
+        if (machineId == 0) {
             val market = new generated.example.stockMarket.v2.Market()
             market.id = 0
             val traders = (1 to partSize).map(i => {
@@ -83,10 +111,10 @@ object stockMarketScaleoutTest extends scaleOutTest with App {
                 trader.id = i
                 trader
             })
-            market.connectedAgentIds = (1 to baseFactor).map(_.toLong)
+            market.connectedAgentIds = (1L to baseFactor)
             Vector(market) ++ traders
         } else {
-            ((partSize * partId + 1) to (partSize * (partId + 1))).map(i => {
+            ((partSize * machineId + 1) to (partSize * (machineId + 1))).map(i => {
                 val trader = new generated.example.stockMarket.v2.Trader(1000, 0.001)
                 trader.id = i
                 trader
@@ -95,20 +123,47 @@ object stockMarketScaleoutTest extends scaleOutTest with App {
     }
 }
 
-// class ERMTest extends scaleUpTest {
-//     override val totalRounds: Int = 50
+object ERMScaleOutTest extends scaleOutTest with App {
+    override val totalRounds: Int = 50
+    val p: Double = 0.01
 
-//     def gen(x: Int): IndexedSeq[Actor] = {
-//         val graph = cloudcity.lib.Graph.GraphFactory.erdosRenyi(baseFactor * x, 0.01)
-//         generated.example.epidemic.v2.InitData(graph)
-//     }
-// }
+    override def main(args: Array[String]): Unit = {
+        exec(args)
+    }
 
-// class SBMTest extends scaleUpTest {
-//     override val totalRounds: Int = 50
+    def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
+        assert(baseFactor % totalMachines == 0)
+        val partSize: Int = baseFactor / totalMachines
 
-//     def gen(x: Int): IndexedSeq[Actor] = {
-//         val graph = cloudcity.lib.Graph.GraphFactory.stochasticBlock(baseFactor * x, 0.01, 0, 5)
-//         generated.example.epidemic.v2.InitData(graph)
-//     }
-// }
+        (0L until partSize).map(i => {
+            val idx = partSize * machineId + i
+            val cell = new generated.example.epidemic.v2.Person(Random.nextInt(90) + 10)
+            cell.id = idx
+            cell.connectedAgentIds = (0L until baseFactor).filter(j => (Random.nextDouble() < p) && (j != idx))
+            cell
+        })
+    }
+}
+
+object SBMScaleOutTest extends scaleOutTest with App {
+    override val totalRounds: Int = 50
+    val p: Double = 0.01
+    val q: Double = 0 
+
+    override def main(args: Array[String]): Unit = {
+        exec(args)
+    }
+
+    def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
+        assert(baseFactor % totalMachines == 0)
+        val partSize: Long = baseFactor / totalMachines
+        (0L until partSize).map(i => {
+            val idx: Long = partSize * machineId + i
+            val cell = new generated.example.epidemic.v2.Person(Random.nextInt(90) + 10)
+            cell.id = idx
+            // the number of blocks is total machines. Only connect with neighbors in the same partition
+            cell.connectedAgentIds = (partSize * machineId until partSize * (machineId + 1)).filter(j => (Random.nextDouble() < p) && (j != idx))
+            cell
+        })
+    }
+}
