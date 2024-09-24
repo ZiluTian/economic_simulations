@@ -34,11 +34,6 @@ object Simulate {
         var totalWorkers = workersPerMachine * totalMachines
         
         println(f"${totalMachines} total machines, ${totalWorkers} total workers, and ${actors.size} actors")
-        
-        if (totalWorkers > actors.size){
-            println(f"Found more workers than agents! Set total workers from ${totalWorkers} to ${actors.size}")
-            totalWorkers = actors.size
-        }
 
         val machinePrefix = "Machine-" 
         val builder: SimulationDataBuilder = if (dataConf == "timeseries") {
@@ -51,6 +46,10 @@ object Simulate {
 
         val actorSystem = role match {
             case "Standalone" => {
+                if (totalWorkers > actors.size){
+                    println(f"Found more workers than agents! Set total workers from ${totalWorkers} to ${actors.size}")
+                    totalWorkers = actors.size
+                }
                 // local mode
                 val config = ConfigFactory.parseString(s"""
                     akka.remote.artery.canonical.port=$port
