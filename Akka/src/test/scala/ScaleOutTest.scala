@@ -37,6 +37,7 @@ abstract class scaleOutTest extends FlatSpec {
     }
 
     def startWorker(ip: String, port: Int, totalMachines: Int, machineId: Int, seed: String): Unit = {
+        // println(f"Total machines $totalMachines this machine is $machineId")
         val agents = gen(machineId, totalMachines)
         val conf = Map("role" -> f"Machine-${machineId}", "ip" -> ip, "port" -> port, "seed" -> seed, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines)            
         val ts = API.Simulate(agents, totalRounds, conf)(DeforestationStrategy.NoReduction)
@@ -61,14 +62,13 @@ abstract class scaleOutTest extends FlatSpec {
 }
 
 object gameOfLifeScaleOutTest extends scaleOutTest with App {
-    val width: Int = 100
-
     override def main(args: Array[String]): Unit = {
         exec(args)
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         assert(baseFactor % totalMachines == 0)
+        val width: Int = 100
         val partSize: Int = baseFactor / totalMachines
         val height: Int = baseFactor / width
 
@@ -125,7 +125,6 @@ object stockMarketScaleOutTest extends scaleOutTest with App {
 
 object ERMScaleOutTest extends scaleOutTest with App {
     override val totalRounds: Int = 50
-    val p: Double = 0.01
 
     override def main(args: Array[String]): Unit = {
         exec(args)
@@ -133,6 +132,7 @@ object ERMScaleOutTest extends scaleOutTest with App {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         assert(baseFactor % totalMachines == 0)
+        val p: Double = 0.01
         val partSize: Int = baseFactor / totalMachines
 
         (0L until partSize).map(i => {
@@ -147,8 +147,6 @@ object ERMScaleOutTest extends scaleOutTest with App {
 
 object SBMScaleOutTest extends scaleOutTest with App {
     override val totalRounds: Int = 50
-    val p: Double = 0.01
-    val q: Double = 0 
 
     override def main(args: Array[String]): Unit = {
         exec(args)
@@ -156,6 +154,7 @@ object SBMScaleOutTest extends scaleOutTest with App {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         assert(baseFactor % totalMachines == 0)
+        val p: Double = 0.01
         val partSize: Long = baseFactor / totalMachines
         (0L until partSize).map(i => {
             val idx: Long = partSize * machineId + i
