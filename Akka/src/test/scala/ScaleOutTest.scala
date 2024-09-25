@@ -16,7 +16,7 @@ abstract class scaleOutTest extends FlatSpec {
     val baseFactor: Int = 50000
     val expNameWithDollar: String = getClass.getSimpleName
     val expName: String = expNameWithDollar.substring(0, expNameWithDollar.length -1)
-    lazy val file = new File(f"scaleOut$baseFactor/$expName.log")
+    lazy val file = new File(f"/local/scratch/zilu/scaleOutLog/$expName.log")
     
     def forceGC(): Unit = {
         System.gc()
