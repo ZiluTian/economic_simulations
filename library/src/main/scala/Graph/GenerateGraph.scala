@@ -90,7 +90,7 @@ class Torus2DGraph(width: Int, height: Int, startingIndex: Long) extends Graph {
     private val g: Map[Long, Iterable[Long]] = generateGraph(width, height, startingIndex)
     
     private def generateGraph(width: Int, height: Int, startingIndex: Long): Map[Long, Iterable[Long]] = {
-        (0L until width * height).par.map(index => {
+        (0L until width * height).map(index => {
             val x: Long = index % width
             val y: Long = index / width
             val neighbors = for {
@@ -101,7 +101,7 @@ class Torus2DGraph(width: Int, height: Int, startingIndex: Long) extends Graph {
                     dy = (y + j + height) % height
             } yield dy * width + dx
             (index + startingIndex, neighbors.map(n => n + startingIndex))
-        }).toMap.seq
+        }).toMap
     }
 
     override def adjacencyList(): Map[Long, Iterable[Long]] = g
@@ -120,7 +120,7 @@ class BipartiteGraph(set1Size: Long, set2Size: Long, startingIndex: Long) extend
         val set1 = (startingIndex until (set1Size + startingIndex))
         val set2 = ((set1Size + startingIndex) until (set1Size + startingIndex + set2Size))
         // Create edges between every node in set1 and every node in set2
-        (set1.par.map(n => (n -> set2)) ++ set2.par.map(n => (n -> set1))).toMap.seq
+        (set1.map(n => (n -> set2)) ++ set2.map(n => (n -> set1))).toMap
     }
 
     override def adjacencyList(): Map[Long, Iterable[Long]] = g

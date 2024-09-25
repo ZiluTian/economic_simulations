@@ -1,6 +1,5 @@
 package BSPModel
 
-import scala.util.Random
 import scala.collection.mutable.Queue
 import scala.collection.mutable.{Map => MutMap}
 
@@ -14,9 +13,38 @@ object Connector {
     implicit def toVertexVecInt(g: Iterable[Long]): Vector[Int] = g.map(_.toInt).toVector
     implicit def toEdgeSetInt(g: Iterable[(Long, Long)]): Set[(Int, Int)] = g.map(i => (i._1.toInt, i._2.toInt)).toSet
 
+    // return the partition that contains edges in g for a given partition map
+    def partitionPartialGraph(edges: Iterable[(BSPId, BSPId)], nodes: Set[BSPId], indexedVertex: Map[BSPId, Int]): IndexedSeq[BSPModel.Graph[BSPId]] = {
+        // assert(indexedVertex.size == totalVertices)
+        // println("Unvisited edges are " + unvisitedEdges)
+        // println("Partitioned vertices are " + partitionedVertices)
+        // unvisited edges are cross-partition edges
+
+        nodes.groupBy(indexedVertex(_)).map(i => {                        
+            var in = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+            var out = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+
+            edges.foreach {
+                case (src, dst) if ((indexedVertex(src) == i._1) && (indexedVertex(dst) != i._1)) =>
+                    val partId = indexedVertex(dst)
+                    out.update(partId, out(partId)+src)
+                case (src, dst) if ((indexedVertex(dst) == i._1) && (indexedVertex(src) != i._1)) => 
+                    val partId = indexedVertex(src)
+                    in.update(partId, in(partId)+src)
+                case _ => 
+            }
+            
+            new BSPModel.Graph[BSPId] {
+                val vertices: Set[BSPId] = i._2
+                val edges: Map[Int, Vector[BSPId]] = Map()
+                val inExtVertices: Map[Int, Vector[BSPId]] = in.map(i => (i._1, i._2.toVector.sorted)).toMap
+                val outIntVertices: Map[Int, Vector[BSPId]] = out.map(i => (i._1, i._2.toVector.sorted)).toMap
+            }
+        }).toVector
+    }
+
     // balanced partition. Each graph should have the same number of nodes 
     def partition(g: cloudcity.lib.Graph.Graph, blocks: Int): IndexedSeq[BSPModel.Graph[BSPId]] = {
-        val rand = new Random()
         if (blocks <= 1) {
             return Vector(new BSPModel.Graph[BSPId]{
                 val vertices: Set[BSPId] = g.nodes
@@ -93,7 +121,6 @@ object Connector {
         }).toMap
         
         // assert(indexedVertex.size == totalVertices)
-
         // println("Unvisited edges are " + unvisitedEdges)
         // println("Partitioned vertices are " + partitionedVertices)
 
