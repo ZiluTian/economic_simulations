@@ -38,8 +38,8 @@ object gameOfLifeFusedScaleOutTest extends scaleOutTest with App {
     // Per local machine, partition into 50 components
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val width: Int = 100
-        val localScaleFactor: Int = 10
-        val height: Int = ((baseFactor / width) /localScaleFactor).toInt
+        // val localScaleFactor: Int = 10
+        val height: Int = (baseFactor / width).toInt
         val totalHeight: Int = (baseFactor * totalMachines / width).toInt
         // println("Vertices are " + graph.nodes)
         // println("Incoming external vertices are " + graph.adjacencyList)
@@ -60,7 +60,7 @@ object gameOfLifeFusedScaleOutTest extends scaleOutTest with App {
         //     BSPModel.Optimize.default(part)
         // }).toVector.slice(startingIndex, localScaleFactor + startingIndex).map(i => new partActor(i))
 
-        val adjList = (startingIndex until width * height + startingIndex).map(index => {
+        val adjList = (startingIndex until baseFactor + startingIndex).map(index => {
             val x: Int = index % width
             val y: Int = index / width
             val neighbors = for {
@@ -70,10 +70,10 @@ object gameOfLifeFusedScaleOutTest extends scaleOutTest with App {
                     dx = (x + i + width) % width
                     dy = (y + j + height) % totalHeight
             } yield dy * width + dx
-            (index + startingIndex, neighbors.map(n => n + startingIndex).toVector)
+            (index -> neighbors)
         }).toMap
 
-        val cells: Map[Int, BSP with ComputeMethod] = adjList.map(i => (i._1, new Cell(i._1, i._2)))
+        val cells: Map[Int, BSP with ComputeMethod] = adjList.map(i => (i._1, new Cell(i._1, i._2.toSeq))).toMap
 
         // val graph = new cloudcity.lib.Graph.Graph {
         //     def adjacencyList() = adjList.map(i => (i._1.toLong, i._2.map(_.toLong)))
