@@ -13,6 +13,49 @@ object Connector {
     implicit def toVertexVecInt(g: Iterable[Long]): Vector[Int] = g.map(_.toInt).toVector
     implicit def toEdgeSetInt(g: Iterable[(Long, Long)]): Set[(Int, Int)] = g.map(i => (i._1.toInt, i._2.toInt)).toSet
 
+        // Horizontal partition of a 2D array
+    def partition2DArray(partId: Int, totalPartitions: Int, width: Int, height: Int): BSPModel.Graph[BSPId] = {
+        assert(partId < totalPartitions)
+
+        val blockSize = width * height
+        val offset = partId * blockSize
+
+        new BSPModel.Graph[BSPId] {
+            val vertices: Set[BSPId] = (offset until offset + width * height).toSet
+            val edges: Map[Int, Vector[BSPId]] = Map()
+            
+            val top_inner_row = (offset until (offset + width)).toVector
+            val last_inner_row = ((offset + blockSize - width) until (offset + blockSize)).toVector
+
+            val top_external_row = ((offset - width) until offset).toVector
+            val bottom_external_row = ((offset + blockSize) until (offset + blockSize + width)).toVector
+
+            val inExtVertices: Map[Int, Vector[BSPId]] = 
+                if (partId == 0) {
+                    Map((totalPartitions-1) -> ((totalPartitions * blockSize - width) until totalPartitions * blockSize).toVector, 
+                        1 -> bottom_external_row)
+                } else if (partId == totalPartitions - 1) {
+                    Map(0 -> (0 until width).toVector, 
+                        (totalPartitions - 2) -> top_external_row)
+                } else {
+                    Map((partId - 1) -> top_external_row, 
+                    (partId + 1) -> bottom_external_row, 
+                    )
+                }
+            val outIntVertices: Map[Int, Vector[BSPId]] = 
+                if (partId == 0) {
+                    Map((totalPartitions-1) -> top_inner_row, 
+                        1 -> last_inner_row)
+                } else if (partId == totalPartitions - 1) {
+                    Map(0 -> last_inner_row, 
+                        (totalPartitions - 2) -> top_inner_row)
+                } else {
+                    Map((partId - 1) -> top_inner_row, 
+                    (partId + 1) -> last_inner_row)
+                }
+        }
+    }
+    
     // return the partition that contains edges in g for a given partition map
     def partitionPartialGraph(edges: Iterable[(BSPId, BSPId)], nodes: Set[BSPId], indexedVertex: Map[BSPId, Int]): IndexedSeq[BSPModel.Graph[BSPId]] = {
         // assert(indexedVertex.size == totalVertices)
