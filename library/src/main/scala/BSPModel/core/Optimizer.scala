@@ -103,8 +103,11 @@ case object StageRemoteCommunication extends Optimizer[
                                         topo.inExtVertices.map(k => (k._1, k._2.intersect(remoteIds.toVector))).filter(i => !i._2.isEmpty).toVector.flatMap(i => i._2.map(j => (i._1, topo.inExtVertices(i._1).indexOf(j))))
 
                                     dbg(f"Receive remote is $receiveRemote")
-                                    assert(remoteIds.size == receiveRemote.size)
-                                        // remoteIds.map(i => topo.asInstanceOf[ArrayGraph[BSPId]].getInboxCacheIndex(i).get)
+                                    // assert(remoteIds.size == receiveRemote.size)
+                                    if (remoteIds.size != receiveRemote.size) {
+                                        throw new Exception(f"In $id, remote ids are $remoteIds and received remote are $receiveRemote not equal! InExtVertices are ${topo.inExtVertices}")
+                                    }
+                                    // remoteIds.map(i => topo.asInstanceOf[ArrayGraph[BSPId]].getInboxCacheIndex(i).get)
                                     override def compile(): Option[Message] = {
                                         var tmp: List[bsp.InMessage] = List()
                                         receiveRemote.foreach(i => {
