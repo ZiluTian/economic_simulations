@@ -92,12 +92,15 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
         val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList))
 
-        partition(graph, localScaleFactor).zipWithIndex.map(i => {
+        partition(graph, localScaleFactor, machineId * localScaleFactor).zipWithIndex.map(i => {
+            val partId = i._2 + machineId * localScaleFactor
+            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = i._2 + machineId * localScaleFactor
+                val id = partId
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
             }

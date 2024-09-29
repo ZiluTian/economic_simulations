@@ -19,9 +19,6 @@ abstract class EpidemicsGraphScaleOutTest extends scaleOutTest {
         val receivedValues: MutMap[BSPId, Double] = MutMap[BSPId, Double]()
         // Cache only the risk attribute, in-place update other attributes only the fly
         var risks: Map[BSPId, Double] = people.mapValues(i => i.risk)
-
-        // println(f"Partition ${partId} incoming external vertices are ${inExtVertices}")
-        // println(f"Partition ${partId} outgoing internal vertices are ${outIntVertices}")
         
         override def run(): Int = {
             receivedMessages.foreach(i => {
@@ -167,8 +164,11 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
         val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
         val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
 
-        partition(graph, localScaleFactor).zipWithIndex.map(i => {
-            new partActor(localScaleFactor * machineId + i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
+        partition(graph, localScaleFactor, localScaleFactor*machineId).zipWithIndex.map(i => {
+            val partId = localScaleFactor * machineId + i._2
+            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+            new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
         }).toVector
     }
 }
