@@ -10,6 +10,7 @@ gen-core/src/main/*
 generated/src/main/*
 benchmark/*
 *.csv 
+bin/workers.sh
 
 ### Generated plot
 *.html
