@@ -5,9 +5,6 @@ source /home/user/zilu/economic_simulations/bin/workers.sh
 choice=$1
 cmd=$2
 
-driver_port="25001"
-worker_port="25500"
-
 case $choice in
     0)
         # for i in $(seq 1 $repeat); do
@@ -15,19 +12,15 @@ case $choice in
             # Create a new folder with the original name
             touch "$LOG/$cmd.log" 
             # echo "Created a new folder: $LOG"
-            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd driver $DRIVER_IP $driver_port $TOTAL_WORKERS"            
-            # driver_port=$((driver_port + 1))
+            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd driver $DRIVER_IP $DRIVER_PORT $TOTAL_WORKERS"            
         # done
         ;;
     *)
-        machineId=$((choice - 1))
-        worker_ip=${WORKERS[$machineId]}
+        MACHINE_ID=$((choice - 1))
+        WORKER_IP=${WORKERS[$MACHINE_ID]}
         # for i in $(seq 1 $repeat); do
             echo "Worker executing test: $cmd"
-            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd worker $worker_ip $worker_port $TOTAL_WORKERS $machineId $DRIVER_IP:$driver_port"
-            # worker_port=$((worker_port + 1))
-            # ps aux | grep java | ps -v 'grep' | awk '{print $2}' | xargs kill  > /dev/null 2>&1 &
-            # driver_port=$((driver_port + 1))
+            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd worker $WORKER_IP $WORKER_PORT $TOTAL_WORKERS $MACHINE_ID $DRIVER_IP:$DRIVER_PORT"
         # done
         ;;
 esac

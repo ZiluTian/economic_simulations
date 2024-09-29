@@ -10,11 +10,11 @@ WORKING_DIR="/home/user/zilu/economic_simulations"
 stopWorkers
 
 # Cluster should not take more than 3 minutes to start
-START_CLUSTER_TIMEOUT=180
+START_CLUSTER_TIMEOUT=1000
 MAX_RETRY=5
 
 # Repeat
-repeat=3
+repeat=7
 
 startExperiment(){
     cmd=$1
@@ -52,7 +52,7 @@ startExperiment(){
     done
 }
 
-for rpt in $(seq 2 $repeat); do
+for rpt in $(seq 3 $repeat); do
     for cmd in "${EXPERIMENTS[@]}"; do
         # Start the driver
         startExperiment "$cmd"
@@ -67,7 +67,6 @@ for rpt in $(seq 2 $repeat); do
             if grep -q "Connection refused" "$LOG/$cmd.log"; then 
                 echo "Connection refused. Retry the experiment"
                 stopWorkers
-                sleep 100
                 startExperiment "$cmd"
             fi
 
@@ -81,7 +80,6 @@ for rpt in $(seq 2 $repeat); do
                 echo "Timeout reached. Keyword not found. Restarting the experiment"
                 # Run the failure command
                 stopWorkers
-                sleep 100
                 startExperiment "$cmd"
                 failure_count=$((failure_count + 1))
             fi
@@ -104,11 +102,13 @@ for rpt in $(seq 2 $repeat); do
                 echo "Keyword 'Average' found."
                 # Execute the command
                 mv "$LOG/$cmd.log" "$LOG/${cmd}_m${TOTAL_WORKERS}_r${rpt}"
+                sleep 10
                 stopWorkers
                 break
             fi
             # Wait 1 second before checking again
             sleep 3
         done
+        sleep 10
     done 
 done
