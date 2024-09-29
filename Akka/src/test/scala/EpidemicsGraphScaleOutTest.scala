@@ -161,7 +161,7 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
         val q: Double = 0
         val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
+        val graph = GraphFactory.stochasticBlock(baseFactor, p, q, localScaleFactor, startingIndex)
         val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
 
         partition(graph, localScaleFactor, localScaleFactor*machineId).zipWithIndex.map(i => {
