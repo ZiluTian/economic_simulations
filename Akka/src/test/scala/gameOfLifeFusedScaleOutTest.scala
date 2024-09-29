@@ -38,29 +38,15 @@ object gameOfLifeFusedScaleOutTest extends scaleOutTest with App {
     // Per local machine, partition into 50 components
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val width: Int = 100
-        // val localScaleFactor: Int = 10
-        val height: Int = (baseFactor / width).toInt
+        val localScaleFactor: Int = 50
         val totalHeight: Int = (baseFactor * totalMachines / width).toInt
+        val height: Int = (baseFactor / width / localScaleFactor).toInt
+        val startingIndex = machineId * baseFactor
         // println("Vertices are " + graph.nodes)
         // println("Incoming external vertices are " + graph.adjacencyList)
         // println("Graph edges are " + graph.edges)
 
-        val startingIndex = machineId * baseFactor
-        // val graph = GraphFactory.torus2D(width, totalHeight)
-        // val cells: Map[Int, BSP with ComputeMethod] = toGraphInt(graph.adjacencyList()).map(i => (i._1, new Cell(i._1, i._2.toSeq))).toMap
-        // partition(graph, totalMachines * localScaleFactor).view.zipWithIndex.map(i => {
-        //     val part = new BSPModel.Partition {
-        //         type Member = BSP with ComputeMethod
-        //         type NodeId = BSPId
-        //         type Value = BSP
-        //         val id = i._2
-        //         val topo = i._1
-        //         val members = i._1.vertices.map(j => cells(j)).toList
-        //     }
-        //     BSPModel.Optimize.default(part)
-        // }).toVector.slice(startingIndex, localScaleFactor + startingIndex).map(i => new partActor(i))
-
-        val cells = (startingIndex until baseFactor + startingIndex).map(index => {
+        val cells = (startingIndex until startingIndex + baseFactor).map(index => {
             val x: Int = index % width
             val y: Int = index / width
             val neighbors = for {
@@ -68,21 +54,24 @@ object gameOfLifeFusedScaleOutTest extends scaleOutTest with App {
                 j <- -1 to 1
                 if !(i == 0 && j == 0)
                     dx = (x + i + width) % width
-                    dy = (y + j + height) % totalHeight
+                    dy = (y + j + totalHeight) % totalHeight
             } yield dy * width + dx
             (index, new Cell(index, neighbors.toSeq))
         }).toMap
 
-        List(partition2DArray(machineId, totalMachines, width, height)).zipWithIndex.map(i => {
+        (0 until localScaleFactor).map(i => {
+            val bspGraph = partition2DArray(machineId * localScaleFactor + i, localScaleFactor * totalMachines, width, height)
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = i._2
-                val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val id = i + machineId * localScaleFactor
+                val topo = bspGraph
+                val members = bspGraph.vertices.map(j => cells(j)).toList
             }
-            BSPModel.Optimize.default(part)
-        }).map(i => new partActor(i)).toVector
+            val ans = new partActor(BSPModel.Optimize.default(part))
+            // println(f"Successfully generated and optimized partition ${i + machineId * localScaleFactor}")
+            ans
+        }).toVector
     }
 }

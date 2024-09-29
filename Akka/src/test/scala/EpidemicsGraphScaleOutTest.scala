@@ -117,22 +117,40 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         exec(args, 50)
     }
 
+    def cuts(partitionSize: Int, totalPartitions: Int): Map[BSPId, Set[BSPId]] = {
+        val p: Double = 0.01
+        val rand = new Random(100)
+        var graph = Map.empty[BSPId, Set[BSPId]]
+        (0 until totalPartitions).foreach ({ i => 
+            (0 until partitionSize).foreach(v => {
+                val neighbors = ((i + 1) * partitionSize until totalPartitions * partitionSize).filter(_ => rand.nextDouble() < p)
+                graph = graph + ((i * partitionSize + v) -> (graph.getOrElse(i * partitionSize + v, Set()) ++ neighbors))
+                neighbors.foreach(n => {
+                    graph = graph + (n -> (graph.getOrElse(n, Set()) + (i * partitionSize + v)))
+                })
+            })
+        })
+        graph
+    }
+
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
+        val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        // val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
-
-        // Generate a partial graph
-        val adjList = (startingIndex until (startingIndex + baseFactor)).map { i =>
-            val neighbors = (0 until (startingIndex + baseFactor * totalMachines)).filter(j => (i != j) && (Random.nextDouble() < p))
-            (i -> neighbors)
-        }.toMap
-
-        val cells = genPopulation(adjList)
-
-        partitionPartialGraph(adjList.toIterable.flatMap(i => i._2.map(j => (j, i._1))), adjList.keys.toSet, (0 until totalMachines * baseFactor).map(i => (i, i % baseFactor)).toMap).view.zipWithIndex.map(i => 
-            new partActor(i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
-        ).toVector
+        val crossPartitionEdges = cuts(baseFactor / localScaleFactor, totalMachines * localScaleFactor)
+        val graph: Map[BSPId, Iterable[BSPId]] = (0 until localScaleFactor).par.map(i => {
+            toGraphInt(GraphFactory.erdosRenyi(baseFactor / localScaleFactor, p, startingIndex + i * (baseFactor / localScaleFactor)).adjacencyList)
+        }).reduce(_++_).map(i => {
+            (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2)
+        })
+        val cells: Map[Int, PersonCell] = genPopulation(graph)
+        val partGraph: Map[Long, Iterable[Long]] = graph.map(i => (i._1.toLong, i._2.map(_.toLong)))
+        (0 until localScaleFactor).map(i => { 
+            val g = partitionPartialGraph(partGraph.toIterable.flatMap { case (node, neighbors) =>
+                neighbors.map(neighbor => (node, neighbor))
+            }, machineId * localScaleFactor + i, baseFactor / localScaleFactor)
+            new partActor(localScaleFactor * machineId + i, g.inExtVertices, g.outIntVertices, g.vertices.map(j => (j, cells(j))).toMap)
+        }).toVector
     }
 }
 
@@ -143,19 +161,14 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
+        val q: Double = 0
+        val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        // val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
+        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
+        val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
 
-        // Generate a partial graph
-        val adjList = (startingIndex until (startingIndex + baseFactor)).map { i =>
-            val neighbors = (startingIndex until (startingIndex + baseFactor)).filter(j => (i != j) && (Random.nextDouble() < p))
-            (i -> neighbors)
-        }.toMap
-
-        val cells = genPopulation(adjList)
-
-        partitionPartialGraph(adjList.toIterable.flatMap(i => i._2.map(j => (j, i._1))), adjList.keys.toSet, (0 until totalMachines * baseFactor).map(i => (i, i % baseFactor)).toMap).view.zipWithIndex.map(i => 
-            new partActor(i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
-        ).toVector
+        partition(graph, localScaleFactor).zipWithIndex.map(i => {
+            new partActor(localScaleFactor * machineId + i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
+        }).toVector
     }
 }

@@ -57,33 +57,72 @@ object Connector {
     }
     
     // return the partition that contains edges in g for a given partition map
-    def partitionPartialGraph(edges: Iterable[(BSPId, BSPId)], nodes: Set[BSPId], indexedVertex: Map[BSPId, Int]): IndexedSeq[BSPModel.Graph[BSPId]] = {
+    def partitionPartialGraph(edges: Iterable[(BSPId, BSPId)], partId: Int, partitionSize: Int): BSPModel.Graph[BSPId] = {
+        // println("Starts partitioning graph!")
         // assert(indexedVertex.size == totalVertices)
         // println("Unvisited edges are " + unvisitedEdges)
         // println("Partitioned vertices are " + partitionedVertices)
         // unvisited edges are cross-partition edges
 
-        nodes.groupBy(indexedVertex(_)).map(i => {                        
-            var in = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
-            var out = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+        var in = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+        var out = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
 
-            edges.foreach {
-                case (src, dst) if ((indexedVertex(src) == i._1) && (indexedVertex(dst) != i._1)) =>
-                    val partId = indexedVertex(dst)
-                    out.update(partId, out(partId)+src)
-                case (src, dst) if ((indexedVertex(dst) == i._1) && (indexedVertex(src) != i._1)) => 
-                    val partId = indexedVertex(src)
-                    in.update(partId, in(partId)+src)
-                case _ => 
-            }
-            
-            new BSPModel.Graph[BSPId] {
-                val vertices: Set[BSPId] = i._2
-                val edges: Map[Int, Vector[BSPId]] = Map()
-                val inExtVertices: Map[Int, Vector[BSPId]] = in.map(i => (i._1, i._2.toVector.sorted)).toMap
-                val outIntVertices: Map[Int, Vector[BSPId]] = out.map(i => (i._1, i._2.toVector.sorted)).toMap
-            }
-        }).toVector
+        edges.foreach(p => {
+            val src = p._1 % partitionSize
+            val dst = p._2 % partitionSize
+            if ((src == partId) && (dst != partId)) {
+                out.update(dst, out(dst)+p._2)
+            } else if ((dst == partId) && (src != partId)) (
+                in.update(src, in(src)+p._1)
+            )
+        })
+        
+        new BSPModel.Graph[BSPId] {
+            val vertices: Set[BSPId] = (partId * partitionSize until (partId + 1) * partitionSize).toSet
+            val edges: Map[Int, Vector[BSPId]] = Map()
+            val inExtVertices: Map[Int, Vector[BSPId]] = in.mapValues(i => i.toVector.sorted).toMap
+            val outIntVertices: Map[Int, Vector[BSPId]] = out.mapValues(i => i.toVector.sorted).toMap
+        }
+    }
+
+    // Horizontal partition of a 2D array
+    def partition2DArray(partId: Int, totalPartitions: Int, width: Int, height: Int): BSPModel.Graph[BSPId] = {
+        assert(partId < totalPartitions)
+
+        val blockSize = width * height
+        val offset = partId * blockSize
+        val top_inner_row = (offset until (offset + width)).toVector
+        val last_inner_row = ((offset + blockSize - width) until (offset + blockSize)).toVector
+        val top_external_row = ((offset - width) until offset).toVector
+        val bottom_external_row = ((offset + blockSize) until (offset + blockSize + width)).toVector
+
+        new BSPModel.Graph[BSPId] {
+            val vertices: Set[BSPId] = (offset until offset + blockSize).toSet
+            val edges: Map[Int, Vector[BSPId]] = Map()
+            val inExtVertices: Map[Int, Vector[BSPId]] = 
+                if (partId == 0) {
+                    Map((totalPartitions-1) -> ((totalPartitions * blockSize - width) until totalPartitions * blockSize).toVector, 
+                        1 -> bottom_external_row)
+                } else if (partId == totalPartitions - 1) {
+                    Map(0 -> (0 until width).toVector, 
+                        (totalPartitions - 2) -> top_external_row)
+                } else {
+                    Map((partId - 1) -> top_external_row, 
+                    (partId + 1) -> bottom_external_row, 
+                    )
+                }
+            val outIntVertices: Map[Int, Vector[BSPId]] = 
+                if (partId == 0) {
+                    Map((totalPartitions-1) -> top_inner_row, 
+                        1 -> last_inner_row)
+                } else if (partId == totalPartitions - 1) {
+                    Map(0 -> last_inner_row, 
+                        (totalPartitions - 2) -> top_inner_row)
+                } else {
+                    Map((partId - 1) -> top_inner_row, 
+                    (partId + 1) -> last_inner_row)
+                }
+        }
     }
 
     // balanced partition. Each graph should have the same number of nodes 

@@ -52,28 +52,30 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
+        val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        // val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
 
         // Generate a partial graph
-        val adjList = (startingIndex until (startingIndex + baseFactor)).map { i =>
-            val neighbors = (0 until (startingIndex + baseFactor * totalMachines)).filter(j => (i != j) && (Random.nextDouble() < p))
-            (i -> neighbors)
+        val adjList = (startingIndex until (startingIndex + baseFactor)).view.map { i =>
+            val neighbors1 = ((0 until startingIndex) ++ (startingIndex + baseFactor until baseFactor * totalMachines)).filter(_ => Random.nextDouble() < p)
+            val neighbors2 = (startingIndex until (startingIndex + baseFactor)).filter(j => i != j && Random.nextDouble() < p)
+            (i -> (neighbors1, neighbors2))
         }.toMap
+        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(adjList.mapValues(i => i._1 ++ i._2))
+        val crossEdges = adjList.toIterable.flatMap(i => i._2._1.map(j => (j, i._1))).toMap
 
-        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(adjList)
-
-        partitionPartialGraph(adjList.toIterable.flatMap(i => i._2.map(j => (j, i._1))), adjList.keys.toSet, (0 until totalMachines * baseFactor).map(i => (i, i % baseFactor)).toMap).view.zipWithIndex.map(i => {
+        (0 until localScaleFactor).map(i => {
+            val bspGraph = partitionPartialGraph(crossEdges, machineId * localScaleFactor + i, baseFactor / localScaleFactor)
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = i._2
-                val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val id = i + machineId * localScaleFactor
+                val topo = bspGraph
+                val members = bspGraph.vertices.map(j => cells(j)).toList
             }
-            BSPModel.Optimize.default(part)
-        }).map(i => new partActor(i)).toVector
+            new partActor(BSPModel.Optimize.default(part))
+        }).toVector
     }
 }
 
@@ -85,29 +87,21 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
         val q: Double = 0
-        val numBlocks: Int = 5
-        
+        val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        // val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
+        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
+        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList))
 
-        // Generate a partial graph
-        val adjList = (startingIndex until (startingIndex + baseFactor)).map { i =>
-            val neighbors = (startingIndex until (startingIndex + baseFactor)).filter(j => (j != i) && (Random.nextDouble() < p))
-            (i -> neighbors)
-        }.toMap
-
-        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(adjList)
-
-        partitionPartialGraph(adjList.toIterable.flatMap(i => i._2.map(j => (j, i._1))), adjList.keys.toSet, (0 until totalMachines * baseFactor).map(i => (i, i % baseFactor)).toMap).view.zipWithIndex.map(i => {
+        partition(graph, localScaleFactor).zipWithIndex.map(i => {
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = i._2
+                val id = i._2 + machineId * localScaleFactor
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
             }
-            BSPModel.Optimize.default(part)
-        }).map(i => new partActor(i)).toVector
+            new partActor(BSPModel.Optimize.default(part))
+        }).toVector
     }
 }
