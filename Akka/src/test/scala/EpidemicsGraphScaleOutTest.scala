@@ -23,6 +23,7 @@ abstract class EpidemicsGraphScaleOutTest extends scaleOutTest {
         override def run(): Int = {
             receivedMessages.foreach(i => {
                 val rpart = i.asInstanceOf[DoubleVectorMessage].value(0).toInt
+                // println(f"$partId receives from id ${rpart} value ${i.asInstanceOf[DoubleVectorMessage].value.tail}")
                 i.asInstanceOf[DoubleVectorMessage].value.tail.zipWithIndex.foreach(j => {
                     receivedValues.update(inExtVertices(rpart)(j._2), j._1)
                 })
@@ -38,12 +39,9 @@ abstract class EpidemicsGraphScaleOutTest extends scaleOutTest {
                             risks(i)    // read from cached value, not immediately updated values
                         } else if (receivedValues.isDefinedAt(i)) {
                             receivedValues(i)
-                        } else if (time == 0) {
-                            // in the first round, no message is received
-                            0
                         } else {
-                            throw new Exception(f"Neighbor ${i} not found in local or remote in partition ${partId}!")
-                        }
+                            0
+                        } 
                         if (person.age > 60) {
                             personalRisk = personalRisk * 2
                         }
@@ -114,16 +112,17 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         exec(args, 50)
     }
 
-    def cuts(partitionSize: Int, totalPartitions: Int): Map[BSPId, Set[BSPId]] = {
+    lazy val cuts: (Int, Int) => Map[BSPId, Set[BSPId]] = (partitionSize: Int, totalPartitions: Int) => {
         val p: Double = 0.01
         val rand = new Random(100)
         var graph = Map.empty[BSPId, Set[BSPId]]
         (0 until totalPartitions).foreach ({ i => 
             (0 until partitionSize).foreach(v => {
+                val vid = i * partitionSize + v
                 val neighbors = ((i + 1) * partitionSize until totalPartitions * partitionSize).filter(_ => rand.nextDouble() < p)
-                graph = graph + ((i * partitionSize + v) -> (graph.getOrElse(i * partitionSize + v, Set()) ++ neighbors))
+                graph = graph + ((i * partitionSize + v) -> (graph.getOrElse(vid, Set()) ++ neighbors))
                 neighbors.foreach(n => {
-                    graph = graph + (n -> (graph.getOrElse(n, Set()) + (i * partitionSize + v)))
+                    graph = graph + (n -> (graph.getOrElse(n, Set()) + vid))
                 })
             })
         })
@@ -134,19 +133,25 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         val p: Double = 0.01
         val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        val crossPartitionEdges = cuts(baseFactor / localScaleFactor, totalMachines * localScaleFactor)
-        val graph: Map[BSPId, Iterable[BSPId]] = (0 until localScaleFactor).par.map(i => {
-            toGraphInt(GraphFactory.erdosRenyi(baseFactor / localScaleFactor, p, startingIndex + i * (baseFactor / localScaleFactor)).adjacencyList)
-        }).reduce(_++_).map(i => {
-            (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2)
-        })
+        val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
+        // println(f"Cross partition edges are ${crossPartitionEdges}")
+        var graph: Map[BSPId, Iterable[BSPId]] =
+            toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex ).adjacencyList)
+            .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
+        // println(f"Graph at $machineId is $graph")
+
         val cells: Map[Int, PersonCell] = genPopulation(graph)
-        val partGraph: Map[Long, Iterable[Long]] = graph.map(i => (i._1.toLong, i._2.map(_.toLong)))
+        val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
+            neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
+        }.toSet
+
         (0 until localScaleFactor).map(i => { 
-            val g = partitionPartialGraph(partGraph.toIterable.flatMap { case (node, neighbors) =>
-                neighbors.map(neighbor => (node, neighbor))
-            }, machineId * localScaleFactor + i, baseFactor / localScaleFactor)
-            new partActor(localScaleFactor * machineId + i, g.inExtVertices, g.outIntVertices, g.vertices.map(j => (j, cells(j))).toMap)
+            val partId = localScaleFactor * machineId + i
+            val g = partitionPartialGraph(edges, partId, baseFactor / localScaleFactor)
+            // println(f"Partition ${partId} vertices ${g.vertices}") 
+            // println(f"Partition ${partId} incoming external vertices are ${g.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${g.outIntVertices}")
+            new partActor(partId, g.inExtVertices, g.outIntVertices, g.vertices.map(j => (j, cells(j))).toMap)
         }).toVector
     }
 }

@@ -20,18 +20,22 @@ object Connector {
         // println("Unvisited edges are " + unvisitedEdges)
         // println("Partitioned vertices are " + partitionedVertices)
         // unvisited edges are cross-partition edges
-
-        var in = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
-        var out = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+        assert(partitionSize != 0)
+        
+        var in = Map[Int, Set[BSPId]]()
+        var out = Map[Int, Set[BSPId]]()
 
         edges.foreach(p => {
-            val src = p._1 % partitionSize
-            val dst = p._2 % partitionSize
+            // println(f"Edge ${p._1} ${p._2} for ${partId} with size ${partitionSize}")
+            val src = p._1 / partitionSize
+            val dst = p._2 / partitionSize
+            // println(f"Edge ${p._1} ${p._2} src ${src} dst ${dst}")
             if ((src == partId) && (dst != partId)) {
-                out.update(dst, out(dst)+p._2)
+                out = out + (dst -> (out.getOrElse(dst, Set())+p._1))
             } else if ((dst == partId) && (src != partId)) (
-                in.update(src, in(src)+p._1)
+                in = in + (src -> (in.getOrElse(src, Set())+p._1))
             )
+            // println(f"In ${in} Out ${out}")
         })
         
         new BSPModel.Graph[BSPId] {

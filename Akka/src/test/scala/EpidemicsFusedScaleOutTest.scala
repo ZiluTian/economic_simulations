@@ -50,27 +50,53 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         exec(args, 50)
     }
 
+    lazy val cuts: (Int, Int) => Map[BSPId, Set[BSPId]] = (partitionSize: Int, totalPartitions: Int) => {
+        val p: Double = 0.01
+        val rand = new Random(100)
+        var graph = Map.empty[BSPId, Set[BSPId]]
+        (0 until totalPartitions).foreach ({ i => 
+            (0 until partitionSize).foreach(v => {
+                val vid = i * partitionSize + v
+                val neighbors = ((i + 1) * partitionSize until totalPartitions * partitionSize).filter(_ => rand.nextDouble() < p)
+                graph = graph + ((i * partitionSize + v) -> (graph.getOrElse(vid, Set()) ++ neighbors))
+                neighbors.foreach(n => {
+                    graph = graph + (n -> (graph.getOrElse(n, Set()) + vid))
+                })
+            })
+        })
+        graph
+    }
+
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
         val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
+        val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
+        // println(crossPartitionEdges)
+        var graph: Map[BSPId, Iterable[BSPId]] =
+            toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex).adjacencyList)
+            .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
 
         // Generate a partial graph
-        val adjList = (startingIndex until (startingIndex + baseFactor)).view.map { i =>
-            val neighbors1 = ((0 until startingIndex) ++ (startingIndex + baseFactor until baseFactor * totalMachines)).filter(_ => Random.nextDouble() < p)
-            val neighbors2 = (startingIndex until (startingIndex + baseFactor)).filter(j => i != j && Random.nextDouble() < p)
-            (i -> (neighbors1, neighbors2))
-        }.toMap
-        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(adjList.mapValues(i => i._1 ++ i._2))
-        val crossEdges = adjList.toIterable.flatMap(i => i._2._1.map(j => (j, i._1))).toMap
+        // val adjList = (startingIndex until (startingIndex + baseFactor)).view.map { i =>
+        //     val neighbors1 = ((0 until startingIndex) ++ (startingIndex + baseFactor until baseFactor * totalMachines)).filter(_ => rand.nextDouble() < p)
+        //     val neighbors2 = (startingIndex until (startingIndex + baseFactor)).filter(j => i != j && rand.nextDouble() < p)
+        //     (i -> (neighbors1, neighbors2))
+        // }.toMap
+        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(graph)
+        val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
+            neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
+        }.toSet
+        // val crossEdges = adjList.toIterable.flatMap(i => i._2._1.flatMap(j => List((i._1, j), (j, i._1)))).toSet
 
         (0 until localScaleFactor).map(i => {
-            val bspGraph = partitionPartialGraph(crossEdges, machineId * localScaleFactor + i, baseFactor / localScaleFactor)
+            val partId = localScaleFactor * machineId + i
+            val bspGraph = partitionPartialGraph(edges, partId, baseFactor / localScaleFactor)
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = i + machineId * localScaleFactor
+                val id = partId
                 val topo = bspGraph
                 val members = bspGraph.vertices.map(j => cells(j)).toList
             }
