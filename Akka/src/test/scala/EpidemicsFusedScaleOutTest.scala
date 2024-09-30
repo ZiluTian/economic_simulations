@@ -89,18 +89,18 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         }.toSet
         // val crossEdges = adjList.toIterable.flatMap(i => i._2._1.flatMap(j => List((i._1, j), (j, i._1)))).toSet
 
-        (0 until localScaleFactor).map(i => {
-            val partId = localScaleFactor * machineId + i
-            val bspGraph = partitionPartialGraph(edges, partId, baseFactor / localScaleFactor)
-            println(f"Local partition $partId at $machineId has been constructed!")
+        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+
+        partitionPartialGraph(edges, partIds, baseFactor / localScaleFactor).view.zipWithIndex.map(i => {
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = partId
-                val topo = bspGraph
-                val members = bspGraph.vertices.map(j => cells(j)).toList
+                val id = partIds(i._2)
+                val topo = i._1
+                val members = i._1.vertices.map(j => cells(j)).toList
             }
+            println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
             new partActor(BSPModel.Optimize.default(part))
         }).toVector
     }

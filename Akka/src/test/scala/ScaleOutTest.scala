@@ -28,7 +28,7 @@ abstract class scaleOutTest extends FlatSpec {
     def startDriver(ip: String, port: Int, totalMachines: Int, totalRounds: Int): Unit = {
         val printStream = new PrintStream(file)
         System.setOut(printStream)
-        val conf = Map("role" -> "Driver", "ip" -> ip, "port" -> port, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines)            
+        val conf = Map("role" -> "Driver", "ip" -> ip, "port" -> port, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines, "workersPerMachine" -> localScaleFactor)            
         val ts = API.Simulate(Vector[Actor](), totalRounds, conf)(DeforestationStrategy.NoReduction)
         forceGC()
         printStream.close()
@@ -37,7 +37,7 @@ abstract class scaleOutTest extends FlatSpec {
     def startWorker(ip: String, port: Int, totalMachines: Int, machineId: Int, seed: String, totalRounds: Int): Unit = {
         // println(f"Total machines $totalMachines this machine is $machineId")
         val agents = gen(machineId, totalMachines)
-        val conf = Map("role" -> f"Machine-${machineId}", "ip" -> ip, "port" -> port, "seed" -> seed, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines)            
+        val conf = Map("role" -> f"Machine-${machineId}", "ip" -> ip, "port" -> port, "seed" -> seed, "name" -> expName, "data" -> "snapshot", "totalMachines" -> totalMachines, "workersPerMachine" -> localScaleFactor)            
         val ts = API.Simulate(agents, totalRounds, conf)(DeforestationStrategy.NoReduction)
     }
 

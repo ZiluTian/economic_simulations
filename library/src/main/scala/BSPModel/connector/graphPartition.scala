@@ -14,7 +14,7 @@ object Connector {
     implicit def toEdgeSetInt(g: Iterable[(Long, Long)]): Set[(Int, Int)] = g.map(i => (i._1.toInt, i._2.toInt)).toSet
     
     // return the partition that contains edges in g for a given partition map
-    def partitionPartialGraph(edges: Iterable[(BSPId, BSPId)], partId: Int, partitionSize: Int): BSPModel.Graph[BSPId] = {
+    def partitionPartialGraph(edges: Iterable[(BSPId, BSPId)], partIds: IndexedSeq[Int], partitionSize: Int): IndexedSeq[BSPModel.Graph[BSPId]] = {
         // println("Starts partitioning graph!")
         // assert(indexedVertex.size == totalVertices)
         // println("Unvisited edges are " + unvisitedEdges)
@@ -22,28 +22,38 @@ object Connector {
         // unvisited edges are cross-partition edges
         assert(partitionSize != 0)
         
-        var in = Map[Int, Set[BSPId]]()
-        var out = Map[Int, Set[BSPId]]()
+        var in = MutMap[Int, Map[Int, Set[BSPId]]]()
+        var out = MutMap[Int, Map[Int, Set[BSPId]]]()
 
-        edges.foreach(p => {
+        partIds.foreach(i => {
+            in(i) = Map[Int, Set[BSPId]]()
+            out(i) = Map[Int, Set[BSPId]]()
+        })
+
+        edges.view.foreach(p => {
             // println(f"Edge ${p._1} ${p._2} for ${partId} with size ${partitionSize}")
             val src = p._1 / partitionSize
             val dst = p._2 / partitionSize
-            // println(f"Edge ${p._1} ${p._2} src ${src} dst ${dst}")
-            if ((src == partId) && (dst != partId)) {
-                out = out + (dst -> (out.getOrElse(dst, Set())+p._1))
-            } else if ((dst == partId) && (src != partId)) (
-                in = in + (src -> (in.getOrElse(src, Set())+p._1))
-            )
-            // println(f"In ${in} Out ${out}")
+            if (src != dst) {
+                partIds.foreach(partId => {
+                    // println(f"Edge ${p._1} ${p._2} src ${src} dst ${dst}")
+                    if ((src == partId) && (dst != partId)) {
+                        out(partId) = out(partId) + (dst -> (out(partId).getOrElse(dst, Set())+p._1))
+                    } else if ((dst == partId) && (src != partId)) (
+                        in(partId) = in(partId) + (src -> (in(partId).getOrElse(src, Set())+p._1))
+                    )
+                })
+            }
         })
         
-        new BSPModel.Graph[BSPId] {
-            val vertices: Set[BSPId] = (partId * partitionSize until (partId + 1) * partitionSize).toSet
-            val edges: Map[Int, Vector[BSPId]] = Map()
-            val inExtVertices: Map[Int, Vector[BSPId]] = in.mapValues(i => i.toVector.sorted).toMap
-            val outIntVertices: Map[Int, Vector[BSPId]] = out.mapValues(i => i.toVector.sorted).toMap
-        }
+        partIds.map(partId => {
+            new BSPModel.Graph[BSPId] {
+                val vertices: Set[BSPId] = (partId * partitionSize until (partId + 1) * partitionSize).toSet
+                val edges: Map[Int, Vector[BSPId]] = Map()
+                val inExtVertices: Map[Int, Vector[BSPId]] = in(partId).mapValues(i => i.toVector.sorted).toMap
+                val outIntVertices: Map[Int, Vector[BSPId]] = out(partId).mapValues(i => i.toVector.sorted).toMap
+            }
+        })
     }
 
     // Horizontal partition of a 2D array

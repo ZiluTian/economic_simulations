@@ -144,14 +144,10 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
             neighbors.flatMap(neighbor => if (neighbor / (baseFactor / localScaleFactor) != node / (baseFactor / localScaleFactor)) List((node, neighbor), (neighbor, node)) else List())
         }.toSet
 
-        (0 until localScaleFactor).map(i => { 
-            val partId = localScaleFactor * machineId + i
-            val g = partitionPartialGraph(edges, partId, baseFactor / localScaleFactor)
-            println(f"Local partition $partId at $machineId has been constructed!")
-            // println(f"Partition ${partId} vertices ${g.vertices}") 
-            // println(f"Partition ${partId} incoming external vertices are ${g.inExtVertices}")
-            // println(f"Partition ${partId} outgoing internal vertices are ${g.outIntVertices}")
-            new partActor(partId, g.inExtVertices, g.outIntVertices, g.vertices.map(j => (j, cells(j))).toMap)
+        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+
+        partitionPartialGraph(edges, partIds, baseFactor / localScaleFactor).view.zipWithIndex.map(i => {
+            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
         }).toVector
     }
 }
