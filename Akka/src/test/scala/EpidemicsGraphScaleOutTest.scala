@@ -133,20 +133,21 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         val p: Double = 0.01
         val startingIndex = machineId * baseFactor
         val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
-        // println(f"Cross partition edges are ${crossPartitionEdges}")
+        println(f"Cross partition edges on $machineId are have been computed!")
         var graph: Map[BSPId, Iterable[BSPId]] =
             toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex ).adjacencyList)
             .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
-        // println(f"Graph at $machineId is $graph")
+        println(f"Graph at $machineId has been constructed!")
 
         val cells: Map[Int, PersonCell] = genPopulation(graph)
         val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
-            neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
+            neighbors.flatMap(neighbor => if (neighbor / (baseFactor / localScaleFactor) != node / (baseFactor / localScaleFactor)) List((node, neighbor), (neighbor, node)) else List())
         }.toSet
 
         (0 until localScaleFactor).map(i => { 
             val partId = localScaleFactor * machineId + i
             val g = partitionPartialGraph(edges, partId, baseFactor / localScaleFactor)
+            println(f"Local partition $partId at $machineId has been constructed!")
             // println(f"Partition ${partId} vertices ${g.vertices}") 
             // println(f"Partition ${partId} incoming external vertices are ${g.inExtVertices}")
             // println(f"Partition ${partId} outgoing internal vertices are ${g.outIntVertices}")

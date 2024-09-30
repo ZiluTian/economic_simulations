@@ -71,10 +71,11 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         val p: Double = 0.01
         val startingIndex = machineId * baseFactor
         val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
-        // println(crossPartitionEdges)
+        println(f"Cross partition edges on $machineId have been computed!")
         var graph: Map[BSPId, Iterable[BSPId]] =
             toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex).adjacencyList)
             .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
+        println(f"Graph at $machineId has been constructed!")
 
         // Generate a partial graph
         // val adjList = (startingIndex until (startingIndex + baseFactor)).view.map { i =>
@@ -84,13 +85,14 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         // }.toMap
         val cells: Map[Int, BSP with ComputeMethod] = genPopulation(graph)
         val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
-            neighbors.flatMap(neighbor => List((node, neighbor), (neighbor, node)))
+            neighbors.flatMap(neighbor => if (neighbor / (baseFactor / localScaleFactor) != node / (baseFactor / localScaleFactor)) List((node, neighbor), (neighbor, node)) else List())
         }.toSet
         // val crossEdges = adjList.toIterable.flatMap(i => i._2._1.flatMap(j => List((i._1, j), (j, i._1)))).toSet
 
         (0 until localScaleFactor).map(i => {
             val partId = localScaleFactor * machineId + i
             val bspGraph = partitionPartialGraph(edges, partId, baseFactor / localScaleFactor)
+            println(f"Local partition $partId at $machineId has been constructed!")
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
