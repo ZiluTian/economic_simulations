@@ -15,6 +15,7 @@ import com.fasterxml.jackson.annotation.{JsonTypeInfo, JsonSubTypes, JsonTypeNam
     new JsonSubTypes.Type(value = classOf[BoolVectorMessage], name = "boolVectorMessage"),
     new JsonSubTypes.Type(value = classOf[IntVectorMessage], name = "intVectorMessage"),
     new JsonSubTypes.Type(value = classOf[DoubleVectorMessage], name = "doubleVectorMessage"),
+    new JsonSubTypes.Type(value = classOf[DoubleVectorVectorMessage], name = "doubleVectorVectorMessage"),
     new JsonSubTypes.Type(value=classOf[RequestMessage], name = "requestMessage"),
     new JsonSubTypes.Type(value=classOf[ResponseMessage], name = "responseMessage")))
 trait Message extends JsonSerializable {
