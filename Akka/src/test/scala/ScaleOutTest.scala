@@ -150,7 +150,7 @@ object SBMScaleOutTest extends scaleOutTest with App {
         val q: Double = 0
 
         val startingIndex = machineId * totalMachines
-        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
+        val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
 
         (0L until baseFactor).map(i => {
             val idx: Long = startingIndex + i

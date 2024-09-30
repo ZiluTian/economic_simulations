@@ -113,7 +113,8 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         val p: Double = 0.01
         val q: Double = 0
         val startingIndex = machineId * baseFactor
-        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
+        val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
+        // val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
         val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList))
 
         partition(graph, localScaleFactor, machineId * localScaleFactor).zipWithIndex.map(i => {

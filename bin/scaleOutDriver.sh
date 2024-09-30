@@ -10,7 +10,7 @@ WORKING_DIR="/home/user/zilu/economic_simulations"
 stopWorkers
 
 # Cluster should not take more than 3 minutes to start
-START_CLUSTER_TIMEOUT=1000
+START_CLUSTER_TIMEOUT=1800
 MAX_RETRY=5
 
 # Repeat

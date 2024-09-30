@@ -71,7 +71,7 @@ class SBMTest extends scaleUpTest {
     override val totalRounds: Int = 50
 
     def gen(x: Int): IndexedSeq[Actor] = {
-        val graph = cloudcity.lib.Graph.GraphFactory.stochasticBlock(baseFactor * x, 0.01, 0, 5)
+        val graph = cloudcity.lib.Graph.GraphFactory.stochasticBlock(baseFactor * x, 0.01, 0, 5*baseFactor)
         generated.example.epidemic.v2.InitData(graph)
     }
 }
