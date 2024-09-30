@@ -54,6 +54,7 @@ startExperiment(){
 
 for rpt in $(seq 3 $repeat); do
     for cmd in "${EXPERIMENTS[@]}"; do
+        sleep 10
         # Start the driver
         startExperiment "$cmd"
 

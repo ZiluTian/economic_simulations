@@ -15,7 +15,7 @@ abstract class scaleOutTest extends FlatSpec {
     val localScaleFactor: Int = 10 // number of workers per machine
     val expNameWithDollar: String = getClass.getSimpleName
     val expName: String = expNameWithDollar.substring(0, expNameWithDollar.length -1)
-    lazy val file = new File(f"/local/scratch/zilu/scaleOutLog/${expName}_10k.log")
+    lazy val file = new File(f"/local/scratch/zilu/scaleOutLog/${expName}.log")
     
     def forceGC(): Unit = {
         System.gc()
@@ -149,12 +149,15 @@ object SBMScaleOutTest extends scaleOutTest with App {
         val p: Double = 0.01
         val q: Double = 0
 
+        val startingIndex = machineId * totalMachines
+        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
+
         (0L until baseFactor).map(i => {
-            val idx: Long = baseFactor * machineId + i
+            val idx: Long = startingIndex + i
             val cell = new generated.example.epidemic.v2.Person(Random.nextInt(90) + 10)
             cell.id = idx
             // the number of blocks is total machines. Only connect with neighbors in the same partition
-            cell.connectedAgentIds = (baseFactor * machineId.toLong until baseFactor * (machineId + 1)).filter(j => (Random.nextDouble() < p) && (j != idx))
+            cell.connectedAgentIds = graph.adjacencyList()(idx)
             cell
         })
     }
