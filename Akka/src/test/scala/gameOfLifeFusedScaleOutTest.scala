@@ -38,7 +38,6 @@ object gameOfLifeFusedScaleOutTest extends scaleOutTest with App {
     // Per local machine, partition into 50 components
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val width: Int = 100
-        val localScaleFactor: Int = 50
         val totalHeight: Int = (baseFactor * totalMachines / width).toInt
         val height: Int = (baseFactor / width / localScaleFactor).toInt
         val startingIndex = machineId * baseFactor

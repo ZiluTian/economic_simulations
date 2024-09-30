@@ -67,7 +67,6 @@ object gameOfLifeGraphScaleOutTest extends scaleOutTest with App {
     // Per local machine, partition into 50 components
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val width: Int = 100
-        val localScaleFactor: Int = 50
         val height: Int = (baseFactor/width/localScaleFactor).toInt
         (0 until localScaleFactor).map(i => {
             new horizontalPartition(machineId * localScaleFactor + i, localScaleFactor * totalMachines, width, height)

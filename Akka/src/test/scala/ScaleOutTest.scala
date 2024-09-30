@@ -10,13 +10,12 @@ import scala.util.Random
 import meta.runtime.{IntVectorMessage, IntArrayMessage, Actor}
 import java.io.{File, PrintStream}
 
-// 50k agents per logical machine
-// 50 workers per logical machine
 abstract class scaleOutTest extends FlatSpec {
-    val baseFactor: Int = 50000
+    val baseFactor: Int = 10000
+    val localScaleFactor: Int = 10 // number of workers per machine
     val expNameWithDollar: String = getClass.getSimpleName
     val expName: String = expNameWithDollar.substring(0, expNameWithDollar.length -1)
-    lazy val file = new File(f"/local/scratch/zilu/scaleOutLog/$expName.log")
+    lazy val file = new File(f"/local/scratch/zilu/scaleOutLog/${expName}_10k.log")
     
     def forceGC(): Unit = {
         System.gc()
@@ -148,6 +147,7 @@ object SBMScaleOutTest extends scaleOutTest with App {
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         assert(machineId < totalMachines)
         val p: Double = 0.01
+        val q: Double = 0
 
         (0L until baseFactor).map(i => {
             val idx: Long = baseFactor * machineId + i

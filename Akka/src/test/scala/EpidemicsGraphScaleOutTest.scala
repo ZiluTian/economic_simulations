@@ -131,7 +131,6 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
-        val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
         val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
         // println(f"Cross partition edges are ${crossPartitionEdges}")
@@ -163,10 +162,8 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
-        val q: Double = 0
-        val localScaleFactor: Int = 50
         val startingIndex = machineId * baseFactor
-        val graph = GraphFactory.stochasticBlock(baseFactor, p, q, localScaleFactor, startingIndex)
+        val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
         val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
 
         partition(graph, localScaleFactor, localScaleFactor*machineId).zipWithIndex.map(i => {
