@@ -32,16 +32,19 @@ abstract class EpidemicsFusedScaleOutTest extends scaleOutTest {
         }
     }
 
-    def genPopulation(g: Map[Int, Iterable[Int]]): Map[Int, BSP with ComputeMethod] = {
-        g.map(i => {
+    def genPopulation(g: Map[Int, Iterable[Int]], partitionSize: Int): Map[Int, List[BSP with ComputeMethod]] = {
+        var ans = Map[Int, List[BSP with ComputeMethod]]()
+        g.foreach(i => {
             val age: Int = Random.nextInt(90)+10
-            (i._1, new PersonAgent(i._1, 
+            val v = new PersonAgent(i._1, 
                     age, 
                     i._2.toVector, 
                     Random.nextBoolean(), 
                     if (Random.nextInt(100)==0) 0 else 2,
-                    if (age > 60) 1 else 0))
+                    if (age > 60) 1 else 0)
+            ans = ans + ((i._1 / partitionSize) -> (v :: ans.getOrElse(i._1 / partitionSize, List[BSP with ComputeMethod]())))
         })
+        ans
     }
 }
 
@@ -70,6 +73,7 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
         val p: Double = 0.01
         val startingIndex = machineId * baseFactor
+        val partitionSize = baseFactor / localScaleFactor
         val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
         println(f"Cross partition edges on $machineId have been computed!")
         var graph: Map[BSPId, Iterable[BSPId]] =
@@ -83,7 +87,7 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         //     val neighbors2 = (startingIndex until (startingIndex + baseFactor)).filter(j => i != j && rand.nextDouble() < p)
         //     (i -> (neighbors1, neighbors2))
         // }.toMap
-        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(graph)
+        val cells: Map[Int, List[BSP with ComputeMethod]] = genPopulation(graph, partitionSize)
         val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
             neighbors.flatMap(neighbor => if (neighbor / (baseFactor / localScaleFactor) != node / (baseFactor / localScaleFactor)) List((node, neighbor), (neighbor, node)) else List())
         }.toSet
@@ -98,7 +102,7 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
                 type Value = BSP
                 val id = partIds(i._2)
                 val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val members = cells(i._2)
             }
             println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
             new partActor(BSPModel.Optimize.default(part))
@@ -115,9 +119,10 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         val p: Double = 0.01
         val q: Double = 0
         val startingIndex = machineId * baseFactor
+        val partitionSize = baseFactor / localScaleFactor
         val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
         // val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
-        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList))
+        val cells: Map[Int, List[BSP with ComputeMethod]] = genPopulation(toGraphInt(graph.adjacencyList), partitionSize)
 
         partition(graph, localScaleFactor, machineId * localScaleFactor).zipWithIndex.map(i => {
             val partId = i._2 + machineId * localScaleFactor
@@ -129,7 +134,7 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
                 type Value = BSP
                 val id = partId
                 val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val members = cells(i._2)
             }
             new partActor(BSPModel.Optimize.default(part))
         }).toVector
