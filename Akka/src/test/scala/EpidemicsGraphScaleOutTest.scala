@@ -169,9 +169,9 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
 
         val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
 
-        partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
+        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
             new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells.getOrElse(machineId * localScaleFactor + i._2, List()).toMap)
-        }).toVector
+        }).seq.toVector
     }
 }
 
@@ -194,9 +194,9 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
             neighbor / partitionSize != node / partitionSize
         }.toSet
         val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
-        partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
+        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
             new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(machineId * localScaleFactor + i._2).toMap)
-        }).toVector
+        }).seq.toVector
 
         // partition(graph, localScaleFactor, localScaleFactor*machineId).view.zipWithIndex.map(i => {
         //     val partId = localScaleFactor * machineId + i._2

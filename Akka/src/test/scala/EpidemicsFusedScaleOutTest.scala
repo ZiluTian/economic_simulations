@@ -107,8 +107,7 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
 
         val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
 
-
-        partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
+        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
             // println(cells.map(i => (i._1, i._2.map(_.id))))
             // println(f"Partitions are ${i._1.vertices}")
             // assert(cells.getOrElse(machineId * localScaleFactor + i._2, List()).size == i._1.vertices.size)
@@ -122,7 +121,7 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
             }
             println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
             new partActor(BSPModel.Optimize.default(part))
-        }).toVector
+        }).seq.toVector
     }
 }
 object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
@@ -145,7 +144,7 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
             (neighbor / partitionSize) != (node / partitionSize)
         }.toSet
-        partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
+        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
@@ -156,7 +155,7 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
             }
             println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
             new partActor(BSPModel.Optimize.default(part))
-        }).toVector
+        }).seq.toVector
 
         // partition(graph, localScaleFactor, machineId * localScaleFactor).view.zipWithIndex.map(i => {
         //     val partId = i._2 + machineId * localScaleFactor
