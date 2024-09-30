@@ -170,7 +170,7 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
 
         partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
-            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(i._2).toMap)
+            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells.getOrElse(machineId * localScaleFactor + i._2, List()).toMap)
         }).toVector
     }
 }
@@ -187,22 +187,22 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
         val partitionSize = baseFactor / localScaleFactor
         val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
         // val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
-        val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
+        // val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
 
-        // val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(toGraphInt(graph.adjacencyList), partitionSize)
-        // val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
-        //     neighbor / partitionSize != node / partitionSize
-        // }.toSet
-        // val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
-        // partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
-        //     new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(i._2).toMap)
-        // }).toVector
-
-        partition(graph, localScaleFactor, localScaleFactor*machineId).view.zipWithIndex.map(i => {
-            val partId = localScaleFactor * machineId + i._2
-            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
-            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
-            new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, cells.filter(j => i._1.vertices.contains(j._1)))
+        val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(toGraphInt(graph.adjacencyList), partitionSize)
+        val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
+            neighbor / partitionSize != node / partitionSize
+        }.toSet
+        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+        partitionPartialGraph(edges, partIds, partitionSize).view.zipWithIndex.map(i => {
+            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(machineId * localScaleFactor + i._2).toMap)
         }).toVector
+
+        // partition(graph, localScaleFactor, localScaleFactor*machineId).view.zipWithIndex.map(i => {
+        //     val partId = localScaleFactor * machineId + i._2
+        //     // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+        //     // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+        //     new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, cells.filter(j => i._1.vertices.contains(j._1)))
+        // }).toVector
     }
 }
