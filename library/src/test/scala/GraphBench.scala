@@ -130,7 +130,7 @@ class GenERMGraphBench extends FlatSpec {
 // Constructing using sequential construct (set-based) uses 40804 ms for 50000 vertices
 
   List(1000, 10000).foreach(totalVertices => {
-    f"Constructing an ERM graph sequentially for $totalVertices vertices" should "be slower" in {
+    f"Constructing an ERM graph sequentially for $totalVertices vertices" should "execute" in {
         val t0 = System.currentTimeMillis()
         var graph = Map.empty[Int, List[Int]]
         val rand = new Random()
@@ -145,7 +145,7 @@ class GenERMGraphBench extends FlatSpec {
         println(f"Constructing using sequential construct uses ${t1-t0} ms for ${totalVertices} vertices")
     }
 
-    f"Constructing an ERM graph sequentially (set-based) for $totalVertices vertices" should "be slower" in {
+    f"Constructing an ERM graph sequentially (set-based) for $totalVertices vertices" should "execute" in {
         val t0 = System.currentTimeMillis()
         var graph = Map.empty[Int, Set[Int]]
         val rand = new Random()
@@ -160,7 +160,7 @@ class GenERMGraphBench extends FlatSpec {
         println(f"Constructing using sequential construct (set-based) uses ${t1-t0} ms for ${totalVertices} vertices")
     }
 
-    f"Constructing an ERM graph in parallel (v1) for $totalVertices vertices" should "be fast" in {
+    f"Constructing an ERM graph in parallel (v1) for $totalVertices vertices" should "execute" in {
         val t0 = System.currentTimeMillis()
         val rand = new Random()
         val graph = (startingIndex until (startingIndex + totalVertices)).par.map(i => {
@@ -175,7 +175,7 @@ class GenERMGraphBench extends FlatSpec {
         println(f"Constructing using par (v1) uses ${t1-t0} ms for ${totalVertices} vertices")  
     }
 
-    f"Constructing an ERM graph in parallel (v2) for $totalVertices vertices" should "be fast" in {
+    f"Constructing an ERM graph in parallel (v2) for $totalVertices vertices" should "execute" in {
         val t0 = System.currentTimeMillis()
         val rand = new Random()
         val graph = (startingIndex until (startingIndex + totalVertices)).par.map(i => {
