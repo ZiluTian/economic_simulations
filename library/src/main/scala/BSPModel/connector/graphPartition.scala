@@ -35,14 +35,8 @@ object Connector {
             val src = p._1 / partitionSize
             val dst = p._2 / partitionSize
             if (src != dst) {
-                partIds.foreach(partId => {
-                    // println(f"Edge ${p._1} ${p._2} src ${src} dst ${dst}")
-                    if ((src == partId) && (dst != partId)) {
-                        out(partId) = out(partId) + (dst -> (out(partId).getOrElse(dst, Set())+p._1))
-                    } else if ((dst == partId) && (src != partId)) (
-                        in(partId) = in(partId) + (src -> (in(partId).getOrElse(src, Set())+p._1))
-                    )
-                })
+                out(src) = out(src) + (dst -> (out(src).getOrElse(dst, Set())+p._1))
+                in(dst) = in(dst) + (src -> (in(dst).getOrElse(src, Set())+p._1))
             }
         })
         
