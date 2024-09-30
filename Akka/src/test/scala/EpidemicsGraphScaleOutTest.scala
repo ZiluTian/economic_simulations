@@ -151,7 +151,7 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
 
         partitionPartialGraph(edges, partIds, baseFactor / localScaleFactor).view.zipWithIndex.map(i => {
-            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(i._2).toMap.filter(j => i._1.vertices.contains(j._1)))
+            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(i._2).toMap)
         }).toVector
     }
 }
