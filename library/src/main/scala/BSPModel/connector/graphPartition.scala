@@ -35,8 +35,12 @@ object Connector {
             val src = p._1 / partitionSize
             val dst = p._2 / partitionSize
             if (src != dst) {
-                out(src) = out(src) + (dst -> (out(src).getOrElse(dst, Set())+p._1))
-                in(dst) = in(dst) + (src -> (in(dst).getOrElse(src, Set())+p._1))
+                if (partIds.contains(src)){
+                    out(src) = out(src) + (dst -> (out(src).getOrElse(dst, Set())+p._1))
+                }
+                if (partIds.contains(dst)){
+                    in(dst) = in(dst) + (src -> (in(dst).getOrElse(src, Set())+p._1))
+                }
             }
         })
         
