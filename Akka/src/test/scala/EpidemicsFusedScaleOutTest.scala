@@ -66,7 +66,7 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
     }
 
     lazy val cuts: (Int, Int) => Map[BSPId, Set[BSPId]] = (partitionSize: Int, totalPartitions: Int) => {
-        val p: Double = 0.01
+        val p: Double = 0.005
         val rand = new Random(100)
         var graph = Map.empty[BSPId, Set[BSPId]]
         (0 until totalPartitions).foreach ({ i => 
@@ -82,46 +82,80 @@ object ERMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
         graph
     }
 
+    lazy val ermGraph = GraphFactory.erdosRenyi(baseFactor * 2, 0.005)
+    lazy val partitionedERMGraph = partition(ermGraph, 2 * localScaleFactor)
+
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        val p: Double = 0.01
-        val startingIndex = machineId * baseFactor
-        val partitionSize = baseFactor / localScaleFactor
-        val crossPartitionEdges = cuts(baseFactor / localScaleFactor, localScaleFactor * totalMachines)
-        println(f"Cross partition edges on $machineId have been computed!")
-        var graph: Map[BSPId, Iterable[BSPId]] =
-            toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex).adjacencyList)
-            .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
-        println(f"Graph at $machineId has been constructed!")
+        val p: Double = 0.005
+        println(f"Cells at $machineId has been constructed!")
+        val partitionedGraphs = partitionedERMGraph.slice(machineId * localScaleFactor, (machineId + 1) * localScaleFactor).par
+        // val cells = genPopulation(partitionedGraphs.flatMap(i => i.vertices).map(i => (i, ermGraph.adjacencyList().getOrElse(i, List()))).seq)
 
-        // Generate a partial graph
-        // val adjList = (startingIndex until (startingIndex + baseFactor)).view.map { i =>
-        //     val neighbors1 = ((0 until startingIndex) ++ (startingIndex + baseFactor until baseFactor * totalMachines)).filter(_ => rand.nextDouble() < p)
-        //     val neighbors2 = (startingIndex until (startingIndex + baseFactor)).filter(j => i != j && rand.nextDouble() < p)
-        //     (i -> (neighbors1, neighbors2))
-        // }.toMap
-        val cells: Map[Int, List[BSP with ComputeMethod]] = genPopulationHashed(graph, partitionSize)
-        val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
-            neighbors.flatMap(neighbor => if ((neighbor / partitionSize) != (node / partitionSize)) List((node, neighbor), (neighbor, node)) else List())
-        }.toSet
-        // val crossEdges = adjList.toIterable.flatMap(i => i._2._1.flatMap(j => List((i._1, j), (j, i._1)))).toSet
-
-        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
-
-        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
-            // println(cells.map(i => (i._1, i._2.map(_.id))))
-            // println(f"Partitions are ${i._1.vertices}")
-            // assert(cells.getOrElse(machineId * localScaleFactor + i._2, List()).size == i._1.vertices.size)
+        partitionedGraphs.zipWithIndex.map(i => {
+            val partId = localScaleFactor * machineId + i._2
+            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
                 type Value = BSP
-                val id = partIds(i._2)
+                val id = partId
                 val topo = i._1
-                val members = cells.getOrElse(machineId * localScaleFactor + i._2, List())
+                val members = genPopulation(i._1.vertices.map(j => (j, ermGraph.adjacencyList().getOrElse(j, List()).map(_.toInt))).toMap).values.toList
             }
-            println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
+            println(f"Local partition ${partId} at $machineId has been constructed!")
             new partActor(BSPModel.Optimize.default(part))
         }).seq.toVector
+
+        // val startingIndex = machineId * baseFactor
+        // val partitionSize = baseFactor / localScaleFactor
+        // val crossPartitionEdges = cuts(partitionSize, localScaleFactor * totalMachines)
+        // println(f"Cross partition edges on $machineId have been computed!")
+
+        // Greedy min k-cut 
+        // val cells: Map[Int, BSP with ComputeMethod] = genPopulation(graph)
+        // partition(graph, localScaleFactor, localScaleFactor*machineId).zipWithIndex.par.map(i => {
+        //     val partId = localScaleFactor * machineId + i._2
+        //     // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+        //     // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+        //     val part = new BSPModel.Partition {
+        //         type Member = BSP with ComputeMethod
+        //         type NodeId = BSPId
+        //         type Value = BSP
+        //         val id = partIds(i._2)
+        //         val topo = i._1
+        //         val members = i._1.vertices.map(j => cells(j)).toList
+        //     }
+
+        //     new partActor(BSPModel.Optimize.default(part))
+        // }).seq.toVector
+
+        // val graph: Map[BSPId, Iterable[BSPId]] =
+        //     toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex).adjacencyList)
+        //     .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
+        // println(f"Graph at $machineId has been constructed!")
+        // // Hash-based partition
+        // val cells: Map[Int, List[BSP with ComputeMethod]] = genPopulationHashed(graph, partitionSize)
+        // val edges: Iterable[(BSPId, BSPId)] = graph.toIterable.flatMap { case (node, neighbors) =>
+        //     neighbors.flatMap(neighbor => if ((neighbor / partitionSize) != (node / partitionSize)) List((node, neighbor), (neighbor, node)) else List())
+        // }.toSet
+        // val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+
+        // partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
+        //     // println(cells.map(i => (i._1, i._2.map(_.id))))
+        //     // println(f"Partitions are ${i._1.vertices}")
+        //     // assert(cells.getOrElse(machineId * localScaleFactor + i._2, List()).size == i._1.vertices.size)
+        //     val part = new BSPModel.Partition {
+        //         type Member = BSP with ComputeMethod
+        //         type NodeId = BSPId
+        //         type Value = BSP
+        //         val id = partIds(i._2)
+        //         val topo = i._1
+        //         val members = cells.getOrElse(machineId * localScaleFactor + i._2, List())
+        //     }
+        //     println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
+        //     new partActor(BSPModel.Optimize.default(part))
+        // }).seq.toVector
     }
 }
 object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
@@ -130,46 +164,44 @@ object SBMFusedScaleOutTest extends EpidemicsFusedScaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        val p: Double = 0.01
+        val p: Double = 0.005
         val q: Double = 0
         val startingIndex = machineId * baseFactor
         val partitionSize = baseFactor / localScaleFactor
         val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
 
-        // val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
-        // val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList))
-        val cells: Map[Int, List[BSP with ComputeMethod]] = genPopulationHashed(toGraphInt(graph.adjacencyList), partitionSize)
-        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
-
-        val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
-            (neighbor / partitionSize) != (node / partitionSize)
-        }.toSet
-        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
-            val part = new BSPModel.Partition {
-                type Member = BSP with ComputeMethod
-                type NodeId = BSPId
-                type Value = BSP
-                val id = partIds(i._2)
-                val topo = i._1
-                val members = cells(machineId * localScaleFactor + i._2)
-            }
-            println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
-            new partActor(BSPModel.Optimize.default(part))
-        }).seq.toVector
-
-        // partition(graph, localScaleFactor, machineId * localScaleFactor).view.zipWithIndex.map(i => {
-        //     val partId = i._2 + machineId * localScaleFactor
-        //     // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
-        //     // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+        // val cells: Map[Int, List[BSP with ComputeMethod]] = genPopulationHashed(toGraphInt(graph.adjacencyList), partitionSize)
+        // val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+        // val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
+        //     (neighbor / partitionSize) != (node / partitionSize)
+        // }.toSet
+        // partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
         //     val part = new BSPModel.Partition {
         //         type Member = BSP with ComputeMethod
         //         type NodeId = BSPId
         //         type Value = BSP
-        //         val id = partId
+        //         val id = partIds(i._2)
         //         val topo = i._1
-        //         val members = i._1.vertices.map(j => cells(j)).toList
+        //         val members = cells(machineId * localScaleFactor + i._2)
         //     }
+        //     println(f"Local partition ${partIds(i._2)} at $machineId has been constructed!")
         //     new partActor(BSPModel.Optimize.default(part))
-        // }).toVector
+        // }).seq.toVector
+
+        val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList))
+        partition(graph, localScaleFactor, machineId * localScaleFactor).zipWithIndex.par.map(i => {
+            val partId = i._2 + machineId * localScaleFactor
+            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+            val part = new BSPModel.Partition {
+                type Member = BSP with ComputeMethod
+                type NodeId = BSPId
+                type Value = BSP
+                val id = partId
+                val topo = i._1
+                val members = i._1.vertices.map(j => cells(j)).toList
+            }
+            new partActor(BSPModel.Optimize.default(part))
+        }).seq.toVector
     }
 }

@@ -22,7 +22,7 @@ class ErdosRenyiGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long
     
     private def generateGraph(totalVertices: Long, edgeProb: Double, startingIndex: Long): Map[Long, Iterable[Long]] = {
         var graph = Map.empty[Long, Set[Long]]
-        val rand = new Random()
+        val rand = new Random(100)
         (startingIndex until (startingIndex + totalVertices)).map { i =>
             val neighbors = (i+1 until (startingIndex + totalVertices)).filter(_ => rand.nextDouble() < edgeProb)
             graph = graph + (i -> (graph.getOrElse(i, Set()) ++ neighbors))

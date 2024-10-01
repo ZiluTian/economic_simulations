@@ -135,7 +135,7 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
     }
 
     lazy val cuts: (Int, Int) => Map[BSPId, Set[BSPId]] = (partitionSize: Int, totalPartitions: Int) => {
-        val p: Double = 0.01
+        val p: Double = 0.005
         val rand = new Random(100)
         var graph = Map.empty[BSPId, Set[BSPId]]
         (0 until totalPartitions).foreach ({ i => 
@@ -151,27 +151,71 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         graph
     }
 
+    lazy val ermGraph = GraphFactory.erdosRenyi(baseFactor * 2, 0.005)
+    lazy val partitionedERMGraph = partition(ermGraph, 2 * localScaleFactor)
+
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        val p: Double = 0.01
-        val startingIndex = machineId * baseFactor
-        val partitionSize = baseFactor / localScaleFactor
-        val crossPartitionEdges = cuts(partitionSize, localScaleFactor * totalMachines)
-        println(f"Cross partition edges on $machineId are have been computed!")
-        var graph: Map[Int, Iterable[Int]] =
-            toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex ).adjacencyList)
-            .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
-        println(f"Graph at $machineId has been constructed!")
-        
-        val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(graph, partitionSize)
-        val edges: Iterable[(Int, Int)] = graph.toIterable.flatMap { case (node, neighbors) =>
-            neighbors.flatMap(neighbor => if ((neighbor / partitionSize) != (node / partitionSize)) List((node, neighbor), (neighbor, node)) else List())
-        }.toSet
+        println(f"Cells at $machineId has been constructed!")
+        val partitionedGraphs = partitionedERMGraph.slice(machineId * localScaleFactor, (machineId + 1) * localScaleFactor).par
+        // val cells = genPopulation(partitionedGraphs.flatMap(i => i.vertices).map(i => (i, ermGraph.adjacencyList().getOrElse(i, List()))).seq)
 
-        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
-
-        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
-            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells.getOrElse(machineId * localScaleFactor + i._2, List()).toMap)
+        partitionedGraphs.zipWithIndex.map(i => {
+            val partId = localScaleFactor * machineId + i._2
+            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+            new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, 
+                genPopulation(i._1.vertices.map(j => (j, ermGraph.adjacencyList().getOrElse(j, List()).map(_.toInt))).toMap)
+            )
         }).seq.toVector
+
+        // A single partition
+        // val crossPartitionEdges = cuts(baseFactor, totalMachines)
+        // println(f"Cross partition edges on $machineId are have been computed!")
+        // val graph: Map[Int, Iterable[Int]] =
+        //     toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex).adjacencyList)
+        //     .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
+        // println(f"Graph at $machineId has been constructed!")
+
+        // // No local segment (use just 1)
+        // val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(graph, baseFactor)
+        // val edges: Iterable[(Int, Int)] = graph.toIterable.flatMap { case (node, neighbors) =>
+        //     neighbors.flatMap(neighbor => if ((neighbor / baseFactor) != (node / baseFactor)) List((node, neighbor), (neighbor, node)) else List())
+        // }.toSet
+        
+        // val partIds = Vector(machineId)
+        // val processedG = partitionPartialGraph(edges, partIds, baseFactor).head
+        // Vector(new partActor(machineId, processedG.inExtVertices, processedG.outIntVertices, cells.getOrElse(machineId, List()).toMap))
+
+        // Locally scale out
+        // val partitionSize = baseFactor / localScaleFactor
+        // val crossPartitionEdges = cuts(partitionSize, localScaleFactor * totalMachines)
+        // println(f"Cross partition edges on $machineId are have been computed!")
+        // val graph: Map[Int, Iterable[Int]] =
+        //     toGraphInt(GraphFactory.erdosRenyi(baseFactor, p, startingIndex).adjacencyList)
+        //     .map(i => (i._1, crossPartitionEdges.getOrElse(i._1, Set()) ++ i._2))
+        // println(f"Graph at $machineId has been constructed!")
+
+        // // Partition strategy 1: hash-based        
+        // val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(graph, partitionSize)
+        // val edges: Iterable[(Int, Int)] = graph.toIterable.flatMap { case (node, neighbors) =>
+        //     neighbors.flatMap(neighbor => if ((neighbor / partitionSize) != (node / partitionSize)) List((node, neighbor), (neighbor, node)) else List())
+        // }.toSet
+        // val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+        
+        // partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
+        //     new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells.getOrElse(machineId * localScaleFactor + i._2, List()).toMap)
+        // }).seq.toVector
+
+        // Partition strategy 2: Greedy min k-cut
+        // val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList).filter(i => {
+        //     i._1 / baseFactor == machineId
+        // }))
+        // partition(graph, localScaleFactor * totalMachines).zipWithIndex.select().par.map(i => {
+        //     val partId = localScaleFactor * machineId + i._2
+        //     // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+        //     // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+        //     new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
+        // }).seq.toVector
     }
 }
 
@@ -181,28 +225,29 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        val p: Double = 0.01
+        val p: Double = 0.005
         val q: Double = 0
         val startingIndex = machineId * baseFactor
         val partitionSize = baseFactor / localScaleFactor
         val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
-        // val graph = GraphFactory.erdosRenyi(baseFactor, p, startingIndex)
-        // val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
 
-        val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(toGraphInt(graph.adjacencyList), partitionSize)
-        val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
-            neighbor / partitionSize != node / partitionSize
-        }.toSet
-        val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
-        partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
-            new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(machineId * localScaleFactor + i._2).toMap)
+        // Partition strategy 1: Hash-based partition
+        // val cells: Map[Int, List[(Int, PersonCell)]] = genPopulationHashed(toGraphInt(graph.adjacencyList), partitionSize)
+        // val edges: Iterable[(BSPId, BSPId)] = graph.edges.filter { case (node, neighbor) =>
+        //     neighbor / partitionSize != node / partitionSize
+        // }.toSet
+        // val partIds = (0 until localScaleFactor).map(i => localScaleFactor * machineId + i)
+        // partitionPartialGraph(edges, partIds, partitionSize).zipWithIndex.par.map(i => {
+        //     new partActor(partIds(i._2), i._1.inExtVertices, i._1.outIntVertices, cells(machineId * localScaleFactor + i._2).toMap)
+        // }).seq.toVector
+
+        // Partition strategy 2: Greedy-based min k-cut
+        val cells: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
+        partition(graph, localScaleFactor, localScaleFactor*machineId).zipWithIndex.par.map(i => {
+            val partId = localScaleFactor * machineId + i._2
+            // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
+            // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
+            new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, cells(j))).toMap)
         }).seq.toVector
-
-        // partition(graph, localScaleFactor, localScaleFactor*machineId).view.zipWithIndex.map(i => {
-        //     val partId = localScaleFactor * machineId + i._2
-        //     // println(f"Partition ${partId} incoming external vertices are ${i._1.inExtVertices}")
-        //     // println(f"Partition ${partId} outgoing internal vertices are ${i._1.outIntVertices}")
-        //     new partActor(partId, i._1.inExtVertices, i._1.outIntVertices, cells.filter(j => i._1.vertices.contains(j._1)))
-        // }).toVector
     }
 }

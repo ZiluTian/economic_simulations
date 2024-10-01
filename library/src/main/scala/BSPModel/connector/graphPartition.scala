@@ -113,7 +113,8 @@ object Connector {
         // allow BSPId to be of different type than default Long type in base Graph
         val adjacencyList: Map[BSPId, Iterable[BSPId]] = toGraphInt(g.adjacencyList())
 
-        var unassigned: Set[BSPId] = g.nodes
+        // Make it deterministic
+        var unassigned: List[BSPId] = g.nodes.map(_.toInt).toList.sorted
         var unvisitedEdges: Set[(BSPId, BSPId)] = g.edges
 
         // println("Unassigned " + unassigned)
@@ -131,7 +132,7 @@ object Connector {
                         if (blockVertices.size < capacity) {
                             if (unassigned.contains(neighbor)) {
                                 blockVertices += neighbor 
-                                unassigned -= neighbor
+                                unassigned = unassigned.filterNot(_ == neighbor)
                                 // Does not throw error in case not found
                                 unvisitedEdges -= ((current, neighbor))
                                 unvisitedEdges -= ((neighbor, current))
@@ -144,7 +145,7 @@ object Connector {
                 } else {
                     // println(f"Block size is ${blockSize} capacity is ${capacity} unassigned size ${unassigned.size}")
                     val randSeed = unassigned.head
-                    unassigned -= randSeed
+                    unassigned = unassigned.tail
                     blockVertices += randSeed 
                     queue.enqueue(randSeed)
                 }
@@ -158,9 +159,9 @@ object Connector {
         val partitionedVertices: Vector[Set[BSPId]] = capacityList.tail.map(i => {
             // randomly pick a starting node from unvisited nodes to build blocks
             val randSeed = unassigned.head
-            unassigned -= randSeed
+            unassigned = unassigned.tail
             buildBlock(randSeed, i)
-        }) ++ Vector(unassigned)
+        }) ++ Vector(unassigned.toSet)
 
         // println(f"Parititioned vertices are $partitionedVertices")
         // println(f"Edges in the original graph are ${g.edges}")
