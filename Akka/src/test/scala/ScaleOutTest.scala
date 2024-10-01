@@ -149,7 +149,7 @@ object SBMScaleOutTest extends scaleOutTest with App {
         val p: Double = 0.01
         val q: Double = 0
 
-        val startingIndex = machineId * totalMachines
+        val startingIndex = machineId * baseFactor
         val graph = GraphFactory.stochasticBlock(baseFactor, p, q, 5, startingIndex)
 
         (0L until baseFactor).map(i => {
