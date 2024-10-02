@@ -151,11 +151,11 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
         graph
     }
 
-    lazy val ermGraph = GraphFactory.erdosRenyi(baseFactor * 2, 0.005)
-    lazy val partitionedERMGraph = partition(ermGraph, 2 * localScaleFactor)
-
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        println(f"Cells at $machineId has been constructed!")
+        val ermGraph = GraphFactory.erdosRenyi(baseFactor * totalMachines, 0.005)
+        println(f"ERM graph at $machineId has been constructed!")
+        val partitionedERMGraph = partition(ermGraph, totalMachines * localScaleFactor)
+        println(f"Partitioned ERM graph at $machineId has been constructed!")
         val partitionedGraphs = partitionedERMGraph.slice(machineId * localScaleFactor, (machineId + 1) * localScaleFactor).par
         // val cells = genPopulation(partitionedGraphs.flatMap(i => i.vertices).map(i => (i, ermGraph.adjacencyList().getOrElse(i, List()))).seq)
 

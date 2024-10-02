@@ -4,6 +4,7 @@ source /home/user/zilu/economic_simulations/bin/workers.sh
 
 choice=$1
 cmd=$2
+totalWorkers=$3
 
 case $choice in
     0)
@@ -12,7 +13,7 @@ case $choice in
             # Create a new folder with the original name
             touch "$LOG/$cmd.log" 
             # echo "Created a new folder: $LOG"
-            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd driver $DRIVER_IP $DRIVER_PORT $TOTAL_WORKERS"            
+            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd driver $DRIVER_IP $DRIVER_PORT $totalWorkers"            
         # done
         ;;
     *)
@@ -20,7 +21,7 @@ case $choice in
         WORKER_IP=${WORKERS[$MACHINE_ID]}
         # for i in $(seq 1 $repeat); do
             echo "Worker executing test: $cmd"
-            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd worker $WORKER_IP $WORKER_PORT $TOTAL_WORKERS $MACHINE_ID $DRIVER_IP:$DRIVER_PORT"
+            sbt -mem 100000 "project akka; test:runMain simulation.akka.test.$cmd worker $WORKER_IP $WORKER_PORT $totalWorkers $MACHINE_ID $DRIVER_IP:$DRIVER_PORT"
         # done
         ;;
 esac
