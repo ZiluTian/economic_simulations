@@ -135,7 +135,7 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
     }
 
     lazy val cuts: (Int, Int) => Map[BSPId, Set[BSPId]] = (partitionSize: Int, totalPartitions: Int) => {
-        val p: Double = 0.005
+        val p: Double = 0.01
         val rand = new Random(100)
         var graph = Map.empty[BSPId, Set[BSPId]]
         (0 until totalPartitions).foreach ({ i => 
@@ -152,7 +152,7 @@ object ERMGraphScaleOutTest extends EpidemicsGraphScaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        val ermGraph = GraphFactory.erdosRenyi(baseFactor * totalMachines, 0.005)
+        val ermGraph = GraphFactory.erdosRenyi(baseFactor * totalMachines, 0.01)
         println(f"ERM graph at $machineId has been constructed!")
         val partitionedERMGraph = partition(ermGraph, totalMachines * localScaleFactor)
         println(f"Partitioned ERM graph at $machineId has been constructed!")
@@ -225,7 +225,7 @@ object SBMGraphScaleOutTest extends  EpidemicsGraphScaleOutTest with App {
     }
 
     def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
-        val p: Double = 0.005
+        val p: Double = 0.01
         val q: Double = 0
         val startingIndex = machineId * baseFactor
         val partitionSize = baseFactor / localScaleFactor

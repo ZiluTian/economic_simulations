@@ -114,7 +114,7 @@ abstract class EpidemicsGraphTest extends scaleUpTest {
 }
 
 class ERMGraphTest extends EpidemicsGraphTest {
-    val p: Double = 0.005
+    val p: Double = 0.01
 
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.erdosRenyi(scaleUpFactor * baseFactor, p)
@@ -126,7 +126,7 @@ class ERMGraphTest extends EpidemicsGraphTest {
 }
 
 class SBMGraphTest extends  EpidemicsGraphTest {
-    val p: Double = 0.005
+    val p: Double = 0.01
     val q: Double = 0
     val numBlocks: Int = 5
 
