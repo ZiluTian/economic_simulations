@@ -16,7 +16,7 @@ abstract class scaleUpTest extends FlatSpec {
     val totalRounds: Int = 200
     val repeat: Int = 3
     val expName: String = getClass.getSimpleName
-    lazy val file = new File(f"base1000/$expName.log")
+    lazy val file = new File(f"/local/scratch/zilu/base1000/${expName}.log")
     
     def forceGC(): Unit = {
         System.gc()
@@ -71,7 +71,7 @@ class SBMTest extends scaleUpTest {
     override val totalRounds: Int = 50
 
     def gen(x: Int): IndexedSeq[Actor] = {
-        val graph = cloudcity.lib.Graph.GraphFactory.stochasticBlock(baseFactor * x, 0.01, 0, 5*baseFactor)
+        val graph = cloudcity.lib.Graph.GraphFactory.stochasticBlock(baseFactor * x, 0.01, 0, 5)
         generated.example.epidemic.v2.InitData(graph)
     }
 }

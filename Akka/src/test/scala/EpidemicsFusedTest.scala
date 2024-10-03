@@ -52,7 +52,7 @@ class ERMFusedTest extends EpidemicsFusedTest {
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
         val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList()))
-        partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
+        partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
@@ -61,8 +61,8 @@ class ERMFusedTest extends EpidemicsFusedTest {
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
             }
-            BSPModel.Optimize.default(part)
-        }).map(i => new partActor(i)).toVector
+            new partActor(BSPModel.Optimize.default(part))
+        }).seq.toVector
     }
 }
 
@@ -74,7 +74,7 @@ class SBMFusedTest extends EpidemicsFusedTest {
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.stochasticBlock(baseFactor * scaleUpFactor, p, q, numBlocks)
         val cells: Map[Int, BSP with ComputeMethod] = genPopulation(toGraphInt(graph.adjacencyList()))
-        partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
+        partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
             val part = new BSPModel.Partition {
                 type Member = BSP with ComputeMethod
                 type NodeId = BSPId
@@ -83,7 +83,7 @@ class SBMFusedTest extends EpidemicsFusedTest {
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
             }
-            BSPModel.Optimize.default(part)
-        }).map(i => new partActor(i)).toVector
+            new partActor(BSPModel.Optimize.default(part))
+        }).seq.toVector
     }
 }

@@ -119,9 +119,9 @@ class ERMGraphTest extends EpidemicsGraphTest {
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.erdosRenyi(scaleUpFactor * baseFactor, p)
         val people: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
-        partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
+        partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
             new partActor(i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, people(j))).toMap)
-        }).toVector
+        }).seq.toVector
     }
 }
 
@@ -133,8 +133,8 @@ class SBMGraphTest extends  EpidemicsGraphTest {
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.stochasticBlock(scaleUpFactor * baseFactor, p, q, numBlocks)
         val people: Map[Int, PersonCell] = genPopulation(toGraphInt(graph.adjacencyList))
-        partition(graph, scaleUpFactor).view.zipWithIndex.map(i => {
+        partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
             new partActor(i._2, i._1.inExtVertices, i._1.outIntVertices, i._1.vertices.map(j => (j, people(j))).toMap)
-        }).toVector
+        }).seq.toVector
     }
 }
