@@ -19,6 +19,7 @@ object bspToAgent{
             id = bsp.id 
             override def run(): Int = {
                 bsp.run(receivedMessages.map(i => bsp.deserialize(toInMessage[bsp.SerializeFormat](i))))
+                receivedMessages.clear()
                 val outMessage = toOutMessage(bsp.message())
                 bsp.receiveFrom.foreach(n => {
                     sendMessage(n, outMessage)
