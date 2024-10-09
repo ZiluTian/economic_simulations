@@ -10,6 +10,14 @@ trait Graph[NodeId] {
     // synthesized message encoding for incoming messages
     val inExtVertices: Map[PartitionId, Vector[NodeId]]
     val outIntVertices: Map[PartitionId, Vector[NodeId]]
+
+    def getInboxCacheIndex(i: NodeId): Option[(PartitionId, Int)] = {
+        // return the index of a value in a cache
+        inExtVertices.collectFirst {
+            case (key, list) if list.contains(i) =>
+            (key, list.indexOf(i))
+        }
+    }
 }
 
 // Pad topo with cache to buffer messages
@@ -19,14 +27,6 @@ abstract class ArrayGraph[NodeId]() extends Graph[NodeId] {
     val inExtVertices: Map[PartitionId, Vector[NodeId]]
     val outIntVertices: Map[PartitionId, Vector[NodeId]]
     val inCache: MutMap[PartitionId, Vector[_ <: Any]]
-
-    def getInboxCacheIndex(i: NodeId): Option[(PartitionId, Int)] = {
-        // return the index of a value in a cache
-        inExtVertices.collectFirst {
-            case (key, list) if list.contains(i) =>
-            (key, list.indexOf(i))
-        }
-    }
 }
 
 object ArrayGraph{

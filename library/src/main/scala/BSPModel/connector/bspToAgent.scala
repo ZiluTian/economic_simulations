@@ -40,6 +40,7 @@ object partToAgent {
             id = part.id.toLong
             val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
             val localReceivedMessages = MutMap[Long, Buffer[Message]]()
+            val outRemoteMessages = MutMap[Long, Buffer[IntMessage]]()
 
             override def run(): Int = {
                 val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
@@ -61,16 +62,129 @@ object partToAgent {
                             case Some(k) => 
                                 localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
                             case None => 
-                                part.topo.outIntVertices.collectFirst {
-                                    case (key, list) if list.contains(i._1) => sendMessages.getOrElseUpdate(key, Buffer[Message]()) ++= i._2
-                                    case _ => throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
+                                var valid = false
+                                part.topo.outIntVertices.foreach(j => {
+                                    if (j._2.contains(m.id)) {
+                                        outRemoteMessages.getOrElseUpdate(j._1, Buffer[IntMessage]()) ++= i._2.asInstanceOf[Buffer[IntMessage]]
+                                        valid = true
+                                    }
+                                })
+                                if (!valid){
+                                    throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
                                 }
                         }
                         i._2.clear()
                     })
-                    sendMessages.foreach(s => {
-                        (s._1, IntVectorMessage(id.toInt +: s._2.map(_.value.asInstanceOf[Int]).toVector))
+                    
+                    outRemoteMessages.foreach(p => {
+                        sendMessage(p._1, IntVectorMessage(id.toInt +: p._2.map(_.asInstanceOf[IntMessage].value).toVector))
                     })
+
+                    outRemoteMessages.clear()
+                })
+                1
+            }
+        }
+    }
+
+    def fuseWithLocalMsgDoubleVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
+            val localReceivedMessages = MutMap[Long, Buffer[Message]]()
+            val outRemoteMessages = MutMap[Long, Buffer[DoubleMessage]]()
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
+                    val pid = i.asInstanceOf[DoubleVectorMessage].value(0).toInt
+                    part.topo.inExtVertices.get(pid) match {
+                        case None => throw new Exception(f"Receive a remote message from unknown $pid")
+                        case Some(x) => x.asInstanceOf[Vector[Int]].map(_.toLong).zip(i.asInstanceOf[DoubleVectorMessage].value.tail.map(j => DoubleMessage(j)))
+                    }
+                }).toMap
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages = localReceivedMessages.remove(m.id).getOrElse(Buffer[Message]())
+                    m.receivedMessages ++= m.connectedAgentIds.view.filter(x => receivedRemote.get(x).isDefined).map(i => receivedRemote(i))
+                    m.run()
+                    m.sendMessages.foreach(i => {
+                        agentIdx.get(i._1) match {
+                            case Some(k) => 
+                                localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
+                            case None => 
+                                var valid = false
+                                part.topo.outIntVertices.foreach(j => {
+                                    if (j._2.contains(m.id)) {
+                                        outRemoteMessages.getOrElseUpdate(j._1, Buffer[DoubleMessage]()) ++= i._2.asInstanceOf[Buffer[DoubleMessage]]
+                                        valid = true
+                                    }
+                                })
+                                if (!valid){
+                                    throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
+                                }
+                        }
+                        i._2.clear()
+                    })
+                    
+                    outRemoteMessages.foreach(p => {
+                        sendMessage(p._1, DoubleVectorMessage(id.toDouble +: p._2.map(_.asInstanceOf[DoubleMessage].value).toVector))
+                    })
+
+                    outRemoteMessages.clear()
+                })
+                1
+            }
+        }
+    }
+
+    def fuseWithLocalMsgDoubleVectorVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
+            val localReceivedMessages = MutMap[Long, Buffer[Message]]()
+            val outRemoteMessages = MutMap[Long, Buffer[DoubleVectorMessage]]()
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
+                    val pid = i.asInstanceOf[DoubleVectorVectorMessage].value(0).head.toInt
+                    part.topo.inExtVertices.get(pid) match {
+                        case None => throw new Exception(f"Receive a remote message from unknown $pid")
+                        case Some(x) => x.asInstanceOf[Vector[Int]].map(_.toLong).zip(i.asInstanceOf[DoubleVectorVectorMessage].value.tail.map(j => DoubleVectorMessage(j)))
+                    }
+                }).toMap
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages = localReceivedMessages.remove(m.id).getOrElse(Buffer[Message]())
+                    m.receivedMessages ++= m.connectedAgentIds.view.filter(x => receivedRemote.get(x).isDefined).map(i => receivedRemote(i))
+                    m.run()
+                    m.sendMessages.foreach(i => {
+                        agentIdx.get(i._1) match {
+                            case Some(k) => 
+                                localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
+                            case None => 
+                                var valid = false
+                                part.topo.outIntVertices.foreach(j => {
+                                    if (j._2.contains(m.id)) {
+                                        outRemoteMessages.getOrElseUpdate(j._1, Buffer[DoubleVectorMessage]()) ++= i._2.asInstanceOf[Buffer[DoubleVectorMessage]]
+                                        valid = true
+                                    }
+                                })
+                                if (!valid){
+                                    throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
+                                }
+                        }
+                        i._2.clear()
+                    })
+                    
+                    outRemoteMessages.foreach(p => {
+                        sendMessage(p._1, DoubleVectorVectorMessage(Vector(id.toDouble) +: p._2.map(_.asInstanceOf[DoubleVectorMessage].value).toVector))
+                    })
+
+                    outRemoteMessages.clear()
                 })
                 1
             }
