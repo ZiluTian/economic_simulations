@@ -67,15 +67,14 @@ class stockMarketFusionOnlyTest extends scaleUpTest {
                 (i + markets, bspToAgent(new TraderAgent(markets + i, (0 until markets), budget, interestRate)))
             })).toMap
         partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
-            val part = new BSPModel.Partition {
+            partToAgent.fuseWithLocalMsgDoubleVectorVectorAgent(new BSPModel.Partition {
                 type Member = Actor
                 type NodeId = BSPId
                 type Value = BSP
                 val id = i._2
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
-            }
-            partToAgent.fuseWithLocalMsgDoubleVectorVectorAgent(part)
+            })
         }).seq.toVector
     }
 }
@@ -87,15 +86,14 @@ class ERMFusionOnlyTest extends EpidemicsFusionOnlyTest {
         val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
         val cells: Map[Int, Actor] = genPopulation(toGraphInt(graph.adjacencyList()))
         partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
-            val part = new BSPModel.Partition {
+            partToAgent.fuseWithLocalMsgDoubleVectorAgent(new BSPModel.Partition {
                 type Member = Actor
                 type NodeId = BSPId
                 type Value = BSP
                 val id = i._2
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
-            }
-            partToAgent.fuseWithLocalMsgDoubleVectorAgent(part)
+            })
         }).seq.toVector
     }
 }
@@ -109,15 +107,14 @@ class SBMFusionOnlyTest extends EpidemicsFusionOnlyTest {
         val graph = GraphFactory.stochasticBlock(baseFactor * scaleUpFactor, p, q, numBlocks)
         val cells: Map[Int, Actor] = genPopulation(toGraphInt(graph.adjacencyList()))
         partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
-            val part = new BSPModel.Partition {
+            partToAgent.fuseWithLocalMsgDoubleVectorAgent(new BSPModel.Partition {
                 type Member = Actor
                 type NodeId = BSPId
                 type Value = BSP
                 val id = i._2
                 val topo = i._1
                 val members = i._1.vertices.map(j => cells(j)).toList
-            }
-            partToAgent.fuseWithLocalMsgDoubleVectorAgent(part)
+            })
         }).seq.toVector
     }
 }

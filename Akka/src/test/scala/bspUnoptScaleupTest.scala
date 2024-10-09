@@ -16,15 +16,15 @@ import BSPModel.example.epidemics._
 abstract class EpidemicsUnoptTest extends scaleUpTest {
     override val totalRounds: Int = 50
 
-    def genPopulation(g: Map[Int, Iterable[Int]]): IndexedSeq[BSP with ComputeMethod] = {
+    def genPopulation(g: Map[Int, Iterable[Int]]): IndexedSeq[Actor] = {
         g.map(i => {
             val age: Int = Random.nextInt(90)+10
-            new PersonAgent(i._1, 
+            bspToAgent(new PersonAgent(i._1, 
                     age, 
                     i._2.toVector, 
                     Random.nextBoolean(), 
                     if (Random.nextInt(100)==0) 0 else 2,
-                    if (age > 60) 1 else 0)
+                    if (age > 60) 1 else 0))
         }).toVector
     }
 }
@@ -62,7 +62,7 @@ class ERMUnoptTest extends EpidemicsUnoptTest {
 
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.erdosRenyi(baseFactor * scaleUpFactor, p)
-        genPopulation(toGraphInt(graph.adjacencyList())).map(i => bspToAgent(i))
+        genPopulation(toGraphInt(graph.adjacencyList()))
     }
 }
 
@@ -73,6 +73,6 @@ class SBMUnoptTest extends EpidemicsUnoptTest {
 
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val graph = GraphFactory.stochasticBlock(baseFactor * scaleUpFactor, p, q, numBlocks)
-        genPopulation(toGraphInt(graph.adjacencyList())).map(i => bspToAgent(i))
+        genPopulation(toGraphInt(graph.adjacencyList()))
     }
 }
