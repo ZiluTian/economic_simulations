@@ -41,6 +41,9 @@ object partToAgent {
             val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
             val localReceivedMessages = MutMap[Long, Buffer[Message]]()
             val outRemoteMessages = MutMap[Long, Buffer[IntMessage]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
 
             override def run(): Int = {
                 val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
@@ -62,16 +65,8 @@ object partToAgent {
                             case Some(k) => 
                                 localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
                             case None => 
-                                var valid = false
-                                part.topo.outIntVertices.foreach(j => {
-                                    if (j._2.contains(m.id)) {
-                                        outRemoteMessages.getOrElseUpdate(j._1, Buffer[IntMessage]()) ++= i._2.asInstanceOf[Buffer[IntMessage]]
-                                        valid = true
-                                    }
-                                })
-                                if (!valid){
-                                    throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
-                                }
+                                val pid = indexedRemote.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                                outRemoteMessages.getOrElseUpdate(pid, Buffer[IntMessage]()) ++= i._2.asInstanceOf[Buffer[IntMessage]]
                         }
                         i._2.clear()
                     })
@@ -93,6 +88,9 @@ object partToAgent {
             val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
             val localReceivedMessages = MutMap[Long, Buffer[Message]]()
             val outRemoteMessages = MutMap[Long, Buffer[DoubleMessage]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
 
             override def run(): Int = {
                 val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
@@ -114,16 +112,8 @@ object partToAgent {
                             case Some(k) => 
                                 localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
                             case None => 
-                                var valid = false
-                                part.topo.outIntVertices.foreach(j => {
-                                    if (j._2.contains(m.id)) {
-                                        outRemoteMessages.getOrElseUpdate(j._1, Buffer[DoubleMessage]()) ++= i._2.asInstanceOf[Buffer[DoubleMessage]]
-                                        valid = true
-                                    }
-                                })
-                                if (!valid){
-                                    throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
-                                }
+                                val pid = indexedRemote.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                                outRemoteMessages.getOrElseUpdate(pid, Buffer[DoubleMessage]()) ++= i._2.asInstanceOf[Buffer[DoubleMessage]]
                         }
                         i._2.clear()
                     })
@@ -145,6 +135,9 @@ object partToAgent {
             val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
             val localReceivedMessages = MutMap[Long, Buffer[Message]]()
             val outRemoteMessages = MutMap[Long, Buffer[DoubleVectorMessage]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
 
             override def run(): Int = {
                 val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
@@ -166,16 +159,8 @@ object partToAgent {
                             case Some(k) => 
                                 localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
                             case None => 
-                                var valid = false
-                                part.topo.outIntVertices.foreach(j => {
-                                    if (j._2.contains(m.id)) {
-                                        outRemoteMessages.getOrElseUpdate(j._1, Buffer[DoubleVectorMessage]()) ++= i._2.asInstanceOf[Buffer[DoubleVectorMessage]]
-                                        valid = true
-                                    }
-                                })
-                                if (!valid){
-                                    throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!")
-                                }
+                                val pid = indexedRemote.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                                outRemoteMessages.getOrElseUpdate(pid, Buffer[DoubleVectorMessage]()) ++= i._2.asInstanceOf[Buffer[DoubleVectorMessage]]
                         }
                         i._2.clear()
                     })
