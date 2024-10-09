@@ -235,4 +235,94 @@ object partToAgent {
             }
         }
     }
+
+    def fuseWithoutLocalMsgIntVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val localReceivedMessages = MutMap[Long, Message]()
+            val outRemoteMessages = MutMap[Long, Buffer[Int]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
+                    val pid = i.asInstanceOf[IntVectorMessage].value(0).toInt
+                    part.topo.inExtVertices.get(pid) match {
+                        case None => throw new Exception(f"Receive a remote message from unknown $pid")
+                        case Some(x) => x.asInstanceOf[Vector[Int]].view.map(_.toLong).zip(i.asInstanceOf[IntVectorMessage].value.tail.map(j => IntMessage(j)))
+                    }
+                }).toMap
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages.clear()
+                    m.connectedAgentIds.foreach(k => {
+                        localReceivedMessages.get(k) match {
+                            case None => {
+                                if (receivedRemote.isDefinedAt(k)) {
+                                    m.receivedMessages += receivedRemote(k)
+                                }
+                            }
+                            case Some(v) => m.receivedMessages += v
+                        }
+                    })
+                    m.run()
+                    localReceivedMessages(m.id) = m.sendMessages.getOrElse(m.id, throw new Exception(f"Double buffered message not found for ${m.id} in part $id")).head
+                    m.sendMessages.clear()
+                })
+
+                part.topo.outIntVertices.foreach(i => {
+                    sendMessage(i._1.toLong,  IntVectorMessage(id.toInt +: i._2.view.map(j => localReceivedMessages(j.asInstanceOf[Int].toLong).value.asInstanceOf[Int]).toVector))
+                })
+                1
+            }
+        }
+    }
+
+    def fuseWithoutLocalMsgDoubleVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val localReceivedMessages = MutMap[Long, Message]()
+            val outRemoteMessages = MutMap[Long, Buffer[Double]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
+                    val pid = i.asInstanceOf[DoubleVectorMessage].value(0).toInt
+                    part.topo.inExtVertices.get(pid) match {
+                        case None => throw new Exception(f"Receive a remote message from unknown $pid")
+                        case Some(x) => x.asInstanceOf[Vector[Int]].view.map(_.toLong).zip(i.asInstanceOf[DoubleVectorMessage].value.tail.map(j => DoubleMessage(j)))
+                    }
+                }).toMap
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages.clear()
+                    m.connectedAgentIds.foreach(k => {
+                        localReceivedMessages.get(k) match {
+                            case None => {
+                                if (receivedRemote.isDefinedAt(k)) {
+                                    m.receivedMessages += receivedRemote(k)
+                                }
+                            }
+                            case Some(v) => m.receivedMessages += v
+                        }
+                    })
+                    m.run()
+                    localReceivedMessages(m.id) = m.sendMessages.getOrElse(m.id, throw new Exception(f"Double buffered message not found for ${m.id} in part $id")).head
+                    m.sendMessages.clear()
+                })
+
+                part.topo.outIntVertices.foreach(i => {
+                    sendMessage(i._1.toLong,  DoubleVectorMessage(id.toDouble +: i._2.view.map(j => localReceivedMessages(j.asInstanceOf[Int].toLong).value.asInstanceOf[Double]).toVector))
+                })
+                1
+            }
+        }
+    }
 }
