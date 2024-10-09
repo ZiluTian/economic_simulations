@@ -88,7 +88,7 @@ object partToAgent {
                 })
 
                 outRemoteMessages.foreach(p => {
-                    sendMessage(p._1, IntVectorMessage(id.toInt +: p._2.map(_.asInstanceOf[IntMessage].value).toVector))
+                    sendMessage(p._1, IntVectorMessage(id.toInt +: p._2.toVector))
                 })
 
                 outRemoteMessages.clear()
