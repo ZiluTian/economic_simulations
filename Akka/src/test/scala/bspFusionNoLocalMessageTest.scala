@@ -32,7 +32,7 @@ abstract class EpidemicsFusionNoLocalMessageTest extends scaleUpTest {
 class gameOfLifeFusionNoLocalMessageTest extends scaleUpTest {
 
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
-        val width: Int = 10
+        val width: Int = 100
         val height: Int = scaleUpFactor*(baseFactor / width).toInt
 
         val graph = GraphFactory.torus2D(width, height)
