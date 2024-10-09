@@ -50,6 +50,120 @@ object bspToAgent{
 object partToAgent {
     import bspToAgent.{toOutMessage}
     
+    def fuseWithRemoteMsgIntVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
+            val localReceivedMessages = MutMap[Long, Buffer[Message]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            })
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Buffer[Message]] = receivedMessages.map(i => {
+                    (i.asInstanceOf[IntVectorMessage].value(0).toLong, toOutMessage(i.asInstanceOf[IntVectorMessage].value(1)))
+                }).groupBy(_._1).mapValues(j => j.map(_._2))
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages = localReceivedMessages.remove(m.id).getOrElse(Buffer[Message]())
+                    m.receivedMessages ++= m.connectedAgentIds.view.filter(x => receivedRemote.get(x).isDefined).flatMap(i => receivedRemote(i))
+                    m.run()
+                    m.sendMessages.foreach(i => {
+                        agentIdx.get(i._1) match {
+                            case Some(k) => 
+                                localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
+                            case None => 
+                                val pid = indexedRemote.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                                i._2.foreach(j => {
+                                    sendMessage(pid, IntVectorMessage(Vector(i._1.toInt, j.asInstanceOf[IntMessage].value)))
+                                })
+                        }
+                        i._2.clear()
+                    })
+                })
+                1
+            }
+        }
+    }
+
+        def fuseWithRemoteMsgDoubleVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
+            val localReceivedMessages = MutMap[Long, Buffer[Message]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Buffer[Message]] = receivedMessages.map(i => {
+                    (i.asInstanceOf[DoubleVectorMessage].value(0).toLong, toOutMessage(i.asInstanceOf[DoubleVectorMessage].value(1)))
+                }).groupBy(_._1).mapValues(j => j.map(_._2))
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages = localReceivedMessages.remove(m.id).getOrElse(Buffer[Message]())
+                    m.receivedMessages ++= m.connectedAgentIds.view.filter(x => receivedRemote.get(x).isDefined).flatMap(i => receivedRemote(i))
+                    m.run()
+                    m.sendMessages.foreach(i => {
+                        agentIdx.get(i._1) match {
+                            case Some(k) => 
+                                localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
+                            case None => 
+                                val pid = indexedRemote.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                                i._2.foreach(j => {
+                                    sendMessage(pid, DoubleVectorMessage(Vector(i._1.toDouble, j.asInstanceOf[DoubleMessage].value)))
+                                })
+                        }
+                        i._2.clear()
+                    })
+                })
+                1
+            }
+        }
+    }
+
+    def fuseWithRemoteMsgDoubleVectorVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
+        new Actor {
+            id = part.id.toLong
+            val agentIdx = part.members.zipWithIndex.map(i => (i._1.id, i._2)).toMap
+            val localReceivedMessages = MutMap[Long, Buffer[Message]]()
+            val indexedRemote: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
+                i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
+            }).toMap
+
+            override def run(): Int = {
+                val receivedRemote: Map[Long, Buffer[Message]] = receivedMessages.map(i => {
+                    (i.asInstanceOf[DoubleVectorVectorMessage].value(0).head.toLong, toOutMessage(i.asInstanceOf[DoubleVectorVectorMessage].value(1)))
+                }).groupBy(_._1).mapValues(j => j.map(_._2))
+
+                receivedMessages.clear()
+                
+                part.members.foreach(m => {
+                    m.receivedMessages = localReceivedMessages.remove(m.id).getOrElse(Buffer[Message]())
+                    m.receivedMessages ++= m.connectedAgentIds.view.filter(x => receivedRemote.get(x).isDefined).flatMap(i => receivedRemote(i))
+                    m.run()
+                    m.sendMessages.foreach(i => {
+                        agentIdx.get(i._1) match {
+                            case Some(k) => 
+                                localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
+                            case None => 
+                                val pid = indexedRemote.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                                i._2.foreach(j => {
+                                    sendMessage(pid, DoubleVectorVectorMessage(Vector(i._1.toDouble) +: Vector(j.asInstanceOf[DoubleVectorMessage].value)))
+                                })
+                        }
+                        i._2.clear()
+                    })
+                })
+                1
+            }
+        }
+    }
+
     def fuseWithLocalMsgIntVectorAgent(part: BSPModel.Partition{type Member = Actor}): Actor = {
         new Actor {
             id = part.id.toLong
