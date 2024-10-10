@@ -55,6 +55,65 @@ object gameOfLifeFusionNoLocalMessageScaleOutTest extends scaleOutTest with App 
     }
 }
 
+object stockMarketFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
+
+    override def main(args: Array[String]): Unit = {
+        exec(args, 200)
+    }
+
+    def gen(machineId: Int, totalMachines: Int): IndexedSeq[Actor] = {
+        val initialStockPrice: Double = 100
+        val budget: Double = 1000
+        val interestRate = 0.0001
+        val elementsPerPartition = baseFactor / localScaleFactor
+        val offset = machineId * baseFactor
+        
+        val cells: Map[Int, Actor] = 
+            (offset until (offset + baseFactor)).map(i => {
+                if (i == 0) {
+                    (i, bspToAgent.noMessage(new MarketAgent(i, (1L until baseFactor * totalMachines), initialStockPrice)))
+                } else {
+                    (i, bspToAgent.noMessage(new TraderAgent(i, List(0), budget, interestRate)))
+                }
+            }).toMap
+
+        (0 until localScaleFactor).par.map(i => {
+            val globalId = machineId * localScaleFactor + i
+            val part = new BSPModel.Partition {
+                type Member = Actor
+                type NodeId = BSPId
+                type Value = BSP
+                val id = globalId
+                val topo = new BSPModel.Graph[BSPId] {
+                    val vertices = (globalId*elementsPerPartition until (globalId+1)*elementsPerPartition).toSet
+                    val edges = Map()
+                    val inExtVertices = if (globalId == 0) {
+                        // Receive values from every agents
+                        (1 until totalMachines * localScaleFactor).map(j => {
+                            (j, (j*elementsPerPartition until (j+1)*elementsPerPartition).toVector)
+                        }).toMap    
+                    } else {
+                        // Receive market state from 0
+                        Map(0 -> Vector(0))
+                    }
+                    val outIntVertices = if (globalId == 0) {
+                        // Send the market value to other partitions
+                        (1 until totalMachines * localScaleFactor).map(j => {
+                            (j -> Vector(0))
+                        }).toMap
+                    } else {
+                        // Send every action to partition 0
+                        Map(0 -> (globalId*elementsPerPartition until (globalId+1)*elementsPerPartition).toVector)
+                    }
+                }
+                // println(f"Partition ${i} has vertices ${topo.vertices} ${topo.inExtVertices}")
+                val members = (globalId*elementsPerPartition until (globalId+1)*elementsPerPartition).map(j => cells(j)).toList
+            }
+            partToAgent.fuseWithoutLocalMsgDoubleVectorVectorAgent(part)
+        }).seq.toVector
+    } 
+}
+
 object stockMarketAggregateFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
     import BSPModel.example.stockMarket.ConditionActionRule._
 
