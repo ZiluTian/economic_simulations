@@ -13,7 +13,7 @@ import BSPModel.Connector._
 import BSPModel.example.stockMarket._
 import BSPModel.example.epidemics._
 
-object gameOfLifeFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
+object gameOfLifeFusionOnlyScaleOutTest extends scaleOutTest with App {
     override def main(args: Array[String]): Unit = {
         exec(args, 200)
     }
@@ -23,9 +23,6 @@ object gameOfLifeFusionNoLocalMessageScaleOutTest extends scaleOutTest with App 
         val totalHeight: Int = (baseFactor * totalMachines / width).toInt
         val height: Int = (baseFactor / width / localScaleFactor).toInt
         val startingIndex = machineId * baseFactor
-        // println("Vertices are " + graph.nodes)
-        // println("Incoming external vertices are " + graph.adjacencyList)
-        // println("Graph edges are " + graph.edges)
 
         val cells = (startingIndex until startingIndex + baseFactor).map(index => {
             val x: Int = index % width
@@ -48,14 +45,14 @@ object gameOfLifeFusionNoLocalMessageScaleOutTest extends scaleOutTest with App 
                 type Value = BSP
                 val id = i + machineId * localScaleFactor
                 val topo = bspGraph
-                val members = bspGraph.vertices.map(j => bspToAgent.noMessage(cells(j))).toList
+                val members = bspGraph.vertices.map(j => bspToAgent(cells(j))).toList
             }
-            partToAgent.fuseWithoutLocalMsgIntVectorAgent(part)
+            partToAgent.fuseWithLocalMsgIntVectorAgent(part)
         }).toVector
     }
 }
 
-object stockMarketAggregateFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
+object stockMarketAggregateFusionOnlyScaleOutTest extends scaleOutTest with App {
     import BSPModel.example.stockMarket.ConditionActionRule._
 
     override def main(args: Array[String]): Unit = {
@@ -202,11 +199,11 @@ object stockMarketAggregateFusionNoLocalMessageScaleOutTest extends scaleOutTest
         val cells: Map[Int, Actor] = 
             adjList.map(i => {
                 if (i._1 == 0) {
-                    (i._1, bspToAgent.noMessage(new MarketAgent(i._1, i._2, initialStockPrice)))
+                    (i._1, bspToAgent(new MarketAgent(i._1, i._2, initialStockPrice)))
                 } else if (i._1 % elementsPerPartition ==0) {
-                    (i._1, bspToAgent.noMessage(new ActionAggregator(i._1, i._2)))
+                    (i._1, bspToAgent(new ActionAggregator(i._1, i._2)))
                 } else {
-                    (i._1, bspToAgent.noMessage(new TraderAgent(i._1, i._2, budget, interestRate)))
+                    (i._1, bspToAgent(new TraderAgent(i._1, i._2, budget, interestRate)))
                 }
             })
 
@@ -242,12 +239,12 @@ object stockMarketAggregateFusionNoLocalMessageScaleOutTest extends scaleOutTest
                 // println(f"Partition ${i} has vertices ${topo.vertices} ${topo.inExtVertices}")
                 val members = (globalId*elementsPerPartition until (globalId+1)*elementsPerPartition).map(j => cells(j)).toList
             }
-            partToAgent.fuseWithoutLocalMsgDoubleVectorVectorAgent(part)
+            partToAgent.fuseWithLocalMsgDoubleVectorVectorAgent(part)
         }).seq.toVector
     } 
 }
 
-object ERMFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
+object ERMFusionOnlyScaleOutTest extends scaleOutTest with App {
 
     override def main(args: Array[String]): Unit = {
         exec(args, 50)
@@ -292,7 +289,7 @@ object ERMFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
                 val members = 
                     i._1.vertices.map(j => {
                         val age = Random.nextInt(90) + 10
-                        bspToAgent.noMessage(new PersonAgent(j, 
+                        bspToAgent(new PersonAgent(j, 
                             age, 
                             ermGraph.adjacencyList().getOrElse(j, List()),
                             Random.nextBoolean(), 
@@ -301,12 +298,12 @@ object ERMFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
                 }).toList
             }
             println(f"Local partition ${partId} at $machineId has been constructed!")
-            partToAgent.fuseWithoutLocalMsgDoubleVectorAgent(part)
+            partToAgent.fuseWithLocalMsgDoubleVectorAgent(part)
         }).seq.toVector
     }
 }
 
-object SBMFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
+object SBMFusionOnlyScaleOutTest extends scaleOutTest with App {
     override def main(args: Array[String]): Unit = {
         exec(args, 50)
     }
@@ -329,7 +326,7 @@ object SBMFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
                 val topo = i._1
                 val members = i._1.vertices.map(j => {
                     val age = Random.nextInt(90) + 10
-                    bspToAgent.noMessage(new PersonAgent(j, 
+                    bspToAgent(new PersonAgent(j, 
                         age, 
                         graph.adjacencyList().getOrElse(j, List()),
                         Random.nextBoolean(), 
@@ -338,7 +335,7 @@ object SBMFusionNoLocalMessageScaleOutTest extends scaleOutTest with App {
                 }).toList
             }
             println(f"Local partition ${partId} at $machineId has been constructed!")
-            partToAgent.fuseWithoutLocalMsgDoubleVectorAgent(part)
+            partToAgent.fuseWithLocalMsgDoubleVectorAgent(part)
         }).seq.toVector
     }
 }
