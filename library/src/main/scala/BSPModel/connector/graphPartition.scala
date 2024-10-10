@@ -96,7 +96,12 @@ object Connector {
 
     // balanced partition. Each graph should have the same number of nodes 
     def partition(g: cloudcity.lib.Graph.Graph, blocks: Int, offset: Int = 0): IndexedSeq[BSPModel.Graph[BSPId]] = {
-        if (blocks <= 1) {
+        // computes the number of vertices in each block
+        val totalVertices: Int = g.nodes.size
+        val verticesPerBlock: Int = totalVertices / blocks
+        val extraVertices: Int = totalVertices % blocks
+
+        if (blocks <= 1 || totalVertices == 0) {
             return Vector(new BSPModel.Graph[BSPId]{
                 val vertices: Set[BSPId] = g.nodes
                 val edges: Map[Int, Vector[BSPId]] = Map()
@@ -104,11 +109,6 @@ object Connector {
                 val outIntVertices: Map[Int, Vector[BSPId]] = Map()
             })
         }
-        
-        // computes the number of vertices in each block
-        val totalVertices: Int = g.nodes.size
-        val verticesPerBlock: Int = totalVertices / blocks
-        val extraVertices: Int = totalVertices % blocks
     
         // allow BSPId to be of different type than default Long type in base Graph
         val adjacencyList: Map[BSPId, Iterable[BSPId]] = toGraphInt(g.adjacencyList())
@@ -178,16 +178,16 @@ object Connector {
 
         // unvisited edges are cross-partition edges
         partitionedVertices.map(x => {
-            var in = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
-            var out = MutMap[Int, Set[BSPId]]().withDefaultValue(Set[BSPId]())
+            var in = Map[Int, Set[BSPId]]()
+            var out = Map[Int, Set[BSPId]]()
 
             unvisitedEdges.foreach {
                 case (src, dst) if x.contains(src) && !x.contains(dst) =>
                     val partId = indexedVertex(dst)
-                    out.update(partId, out(partId)+src)
+                    out = out + (partId -> (out.getOrElse(partId, Set()) + src))
                 case (src, dst) if x.contains(dst) && !x.contains(src) => 
                     val partId = indexedVertex(src)
-                    in.update(partId, in(partId)+src)
+                    in = in +  (partId -> (in.getOrElse(partId, Set())+src))
                 case _ => 
             }
             
