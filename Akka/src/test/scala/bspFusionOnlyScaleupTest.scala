@@ -34,21 +34,35 @@ class gameOfLifeFusionOnlyTest extends scaleUpTest {
     def gen(scaleUpFactor: Int): IndexedSeq[Actor] = {
         val width: Int = 100
         val height: Int = scaleUpFactor*(baseFactor / width).toInt
+        // println(f"Widht ${width} height ${height}")
 
         val graph = GraphFactory.torus2D(width, height)
         val cells: Map[Int, Actor] = toGraphInt(graph.adjacencyList()).map(i => (i._1, bspToAgent(new Cell(i._1, i._2.toSeq)))).toMap
-        (0 until scaleUpFactor).map(i => {
-            val tp = partition2DArray(i, scaleUpFactor, width, (baseFactor / width).toInt)
-            val part = new BSPModel.Partition {
+        // cells.foreach(i => assert(i._2.connectedAgentIds.size == 8))
+
+        partition(graph, scaleUpFactor).zipWithIndex.par.map(i => {
+            partToAgent.fuseWithLocalMsgIntVectorAgent(new BSPModel.Partition {
                 type Member = Actor
                 type NodeId = BSPId
                 type Value = BSP
-                val id = i
-                val topo = tp
-                val members = tp.vertices.toList.map(j => cells(j))
-            }
-            partToAgent.fuseWithLocalMsgIntVectorAgent(part)
-        }).toVector
+                val id = i._2
+                val topo = i._1
+                val members = i._1.vertices.toList.map(j => cells(j))
+            })
+        }).seq.toVector
+
+        // (0 until scaleUpFactor).map(i => {
+        // val tp = partition2DArray(i, scaleUpFactor, width, (baseFactor / width).toInt)
+        //     val part = new BSPModel.Partition {
+        //         type Member = Actor
+        //         type NodeId = BSPId
+        //         type Value = BSP
+        //         val id = i
+        //         val topo = tp
+        //         val members = tp.vertices.toList.map(j => cells(j))
+        //     }
+        //     partToAgent.fuseWithLocalMsgIntVectorAgent(part)
+        // }).toVector
     }
 }
 
