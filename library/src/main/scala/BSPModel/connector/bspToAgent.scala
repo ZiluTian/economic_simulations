@@ -19,12 +19,14 @@ object bspToAgent{
     def apply(bsp: BSP with ComputeMethod): meta.runtime.Actor = {
         new meta.runtime.Actor {
             id = bsp.id 
+            connectedAgentIds = bsp.receiveFrom.map(_.toLong)
+
             override def run(): Int = {
                 // println(f"$id receives ${receivedMessages.size} messages")
                 bsp.run(receivedMessages.map(i => bsp.deserialize(toInMessage[bsp.SerializeFormat](i))))
                 receivedMessages.clear()
                 val outMessage = toOutMessage(bsp.message())
-                bsp.receiveFrom.foreach(n => {
+                connectedAgentIds.foreach(n => {
                     sendMessage(n, outMessage)
                 })
                 1

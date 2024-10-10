@@ -32,7 +32,7 @@ object fuseWithLocalMsgSynthRemote {
                     val pid = parsePid(i.asInstanceOf[T])
                     part.topo.inExtVertices.get(pid) match {
                         case None => throw new Exception(f"Receive a remote message from unknown $pid")
-                        case Some(x) => x.asInstanceOf[Buffer[Int]].view.map(_.toLong).zip(remoteToLocal(i.asInstanceOf[T]))
+                        case Some(x) => x.asInstanceOf[Vector[Int]].view.map(_.toLong).zip(remoteToLocal(i.asInstanceOf[T]))
                     }
                 }).toMap
 
@@ -40,7 +40,7 @@ object fuseWithLocalMsgSynthRemote {
                 
                 part.members.foreach(m => {
                     m.receivedMessages = localReceivedMessages.remove(m.id).getOrElse(Buffer())
-                    m.receivedMessages ++= localToRemoteIds.getOrElse(m.id, List()).map(x => receivedRemote(x))
+                    m.receivedMessages ++= localToRemoteIds.getOrElse(m.id, List()).view.map(x => receivedRemote.get(x)).filter(_.isDefined).map(_.get)
                     m.run()
                 })
 
