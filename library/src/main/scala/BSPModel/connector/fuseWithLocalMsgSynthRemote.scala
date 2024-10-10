@@ -3,7 +3,6 @@ package BSPModel
 import meta.runtime._
 import scala.collection.mutable.{Map => MutMap, Buffer}
 
-// partition members need to be sorted
 object fuseWithLocalMsgSynthRemote {
     def apply[T <: Message, V <: Message, K](part: BSPModel.Partition{type Member = Actor},
             parsePid: T => Int,
@@ -25,8 +24,9 @@ object fuseWithLocalMsgSynthRemote {
             }).toMap
 
             override def run(): Int = {
+                // (internal id, value)
+                var outValues = Map[Long, K]()
                 // (receiver partition id, messages)
-                var outRemoteMessages = Map[Long, Vector[K]]()
                 // (sender id, message)
                 val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
                     val pid = parsePid(i.asInstanceOf[T])
@@ -48,17 +48,23 @@ object fuseWithLocalMsgSynthRemote {
                     m.sendMessages.foreach(i => {
                         if (agentIdx.contains(i._1)) {
                             localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
-                        } else {
-                            val pid = localToRemotePart.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
-                            outRemoteMessages = outRemoteMessages + (pid -> (outRemoteMessages.getOrElse(pid, Vector[K]()) ++ i._2.asInstanceOf[Buffer[V]].map(_.value.asInstanceOf[K])))
+                        } else if (!outValues.isDefinedAt(m.id)){
+                            outValues = outValues + (m.id -> i._2.head.value.asInstanceOf[K])
+                            // assume sending the same value in all messages
+                            // val pid = localToRemotePart.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
+                            // outRemoteMessages = outRemoteMessages + (pid -> (outRemoteMessages.getOrElse(pid, Vector[K]()) ++ i._2.asInstanceOf[Buffer[V]].map(_.value.asInstanceOf[K])))
                         }
                         i._2.clear()
                     })
                 })
 
-                outRemoteMessages.foreach(p => {
-                    sendMessage(p._1, valuesToRemote(id, p._2))
+                part.topo.outIntVertices.foreach(i => {
+                    sendMessage(i._1.toLong, valuesToRemote(id, i._2.map(j => outValues(j.asInstanceOf[Int].toLong))))
                 })
+
+                // outRemoteMessages.foreach(p => {
+                //     sendMessage(p._1, valuesToRemote(id, p._2))
+                // })
                 1
             }
         }
