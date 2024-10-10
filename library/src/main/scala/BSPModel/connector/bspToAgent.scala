@@ -76,7 +76,6 @@ object partToAgent {
         fuseWithLocalMsgSynthRemote(part,
             (i: IntVectorMessage) => i.value.head,
             (i: IntVectorMessage) => i.value.tail.map(j => IntMessage(j)),
-            (i: IntMessage) => i.value,
             (id: Long, p: IndexedSeq[Int]) => IntVectorMessage(id.toInt +: p.toVector)
         )
     }
@@ -85,7 +84,6 @@ object partToAgent {
         fuseWithLocalMsgSynthRemote(part,
             (i: DoubleVectorMessage) => i.value.head.toInt,
             (i: DoubleVectorMessage) => i.value.tail.map(j => DoubleMessage(j)),
-            (i: DoubleMessage) => i.value,
             (id: Long, p: IndexedSeq[Double]) => DoubleVectorMessage(id.toDouble +: p.toVector)
         )
     }
@@ -94,7 +92,6 @@ object partToAgent {
         fuseWithLocalMsgSynthRemote(part,
             (i: DoubleVectorVectorMessage) => i.value.head.head.toInt,
             (i: DoubleVectorVectorMessage) => i.value.tail.map(j => DoubleVectorMessage(j)),
-            (i: DoubleVectorMessage) => i.value,
             (id: Long, p: IndexedSeq[Vector[Double]]) => DoubleVectorVectorMessage(Vector(id.toDouble) +: p.toVector)
         )
     }

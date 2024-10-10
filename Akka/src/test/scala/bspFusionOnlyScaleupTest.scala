@@ -45,7 +45,7 @@ class gameOfLifeFusionOnlyTest extends scaleUpTest {
                 type Value = BSP
                 val id = i
                 val topo = tp
-                val members = tp.vertices.map(j => cells(j)).toList
+                val members = tp.vertices.toList.sorted.map(j => cells(j))
             }
             partToAgent.fuseWithLocalMsgIntVectorAgent(part)
         }).toVector
@@ -73,7 +73,7 @@ class stockMarketFusionOnlyTest extends scaleUpTest {
                 type Value = BSP
                 val id = i._2
                 val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val members = i._1.vertices.toList.sorted.map(j => cells(j))
             })
         }).seq.toVector
     }
@@ -92,7 +92,7 @@ class ERMFusionOnlyTest extends EpidemicsFusionOnlyTest {
                 type Value = BSP
                 val id = i._2
                 val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val members = i._1.vertices.toList.sorted.map(j => cells(j))
             })
         }).seq.toVector
     }
@@ -113,7 +113,7 @@ class SBMFusionOnlyTest extends EpidemicsFusionOnlyTest {
                 type Value = BSP
                 val id = i._2
                 val topo = i._1
-                val members = i._1.vertices.map(j => cells(j)).toList
+                val members = i._1.vertices.toList.sorted.map(j => cells(j))
             })
         }).seq.toVector
     }

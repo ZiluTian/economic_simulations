@@ -8,15 +8,13 @@ object fuseWithLocalMsgSynthRemote {
     def apply[T <: Message, V <: Message, K](part: BSPModel.Partition{type Member = Actor},
             parsePid: T => Int,
             remoteToLocal: T => IndexedSeq[V],
-            localToValue: V => K, 
             valuesToRemote: (Long, IndexedSeq[K]) => T): Actor = {
         new Actor {
             id = part.id.toLong
             val agentIdx = part.members.map(i => i.id).toSet
             // (receiver id, messages)
             val localReceivedMessages = MutMap[Long, Buffer[Message]]()
-            // (receiver partition id, messages)
-            val outRemoteMessages = MutMap[Long, Buffer[K]]()
+            
             // (internal id, partition id)
             val localToRemotePart: Map[Long, Long] = part.topo.outIntVertices.flatMap(i => {
                 i._2.map(k => (k.asInstanceOf[Int].toLong, i._1.toLong))
@@ -27,6 +25,8 @@ object fuseWithLocalMsgSynthRemote {
             }).toMap
 
             override def run(): Int = {
+                // (receiver partition id, messages)
+                var outRemoteMessages = Map[Long, Vector[K]]()
                 // (sender id, message)
                 val receivedRemote: Map[Long, Message] = receivedMessages.flatMap(i => {
                     val pid = parsePid(i.asInstanceOf[T])
@@ -50,17 +50,15 @@ object fuseWithLocalMsgSynthRemote {
                             localReceivedMessages.getOrElseUpdate(i._1, Buffer[Message]()) ++= i._2
                         } else {
                             val pid = localToRemotePart.getOrElse(m.id, throw new Exception(f"${m.id} in ${id} attempts to send a message to ${i._1}, which is not local or in ${part.topo.outIntVertices}!"))
-                            outRemoteMessages.getOrElseUpdate(pid, Buffer[K]()) ++= i._2.asInstanceOf[Buffer[V]].map(i => localToValue(i))
+                            outRemoteMessages = outRemoteMessages + (pid -> (outRemoteMessages.getOrElse(pid, Vector[K]()) ++ i._2.asInstanceOf[Buffer[V]].map(_.value.asInstanceOf[K])))
                         }
                         i._2.clear()
                     })
                 })
 
                 outRemoteMessages.foreach(p => {
-                    sendMessage(p._1, valuesToRemote(id, p._2.toVector))
+                    sendMessage(p._1, valuesToRemote(id, p._2))
                 })
-
-                outRemoteMessages.clear()
                 1
             }
         }
