@@ -1,6 +1,10 @@
 [![Scala CI](https://github.com/ZiluTian/economic_simulations/actions/workflows/scala.yml/badge.svg?branch=latest)](https://github.com/ZiluTian/economic_simulations/actions/workflows/scala.yml)
 
-## Large-scale agent-based simulation 
+## OptiFusion
+
+OptiFusion is a library built in CloudCity. This library implements behavioral equations and exploits data-sharing and computation-sharing optimizations for complex stateful computations, like agent-based simulations. You can find the source code of OptiFusion in `/library/src/main/scala/BSPModel`, the benchmark implementations in `/library/src/main/scala/BSPModel/example`, and the source code for scale-up and scale-out experiments are in `/Akka/src/test/scala/`.
+
+## CloudCity
 
 CloudCity is a research prototype (not production-ready) designed for distributed agent-based simulations (see [1]), following a BSP-like model (see [2]). The system contains three parts, frontend (DSL), core (compiler that translates the DSL to Scala), and backend (Akka-based runtime and a single-threaded runtime for local development). The programming model (DSL) is described in detail in [3].
 
