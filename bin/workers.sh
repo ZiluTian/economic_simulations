@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DRIVER_IP="130.60.194.131"
+DRIVER_IP="130.60.194.135"
 DRIVER_PORT="8000"
 WORKER_PORT="8001"
 
@@ -18,22 +18,40 @@ WORKERS=(
     130.60.194.140
 )
 
-TOTAL_WORKERS=(10 9 8 6 5 4 2 1)
+TOTAL_WORKERS=(10 8 6 4 2)
 
-EXPERIMENTS=(
-    "stockMarketScaleOutTest"
-    "stockMarketFusedAggregateScaleOutTest"
-    "stockMarketGraphScaleOutTest"
-    "gameOfLifeScaleOutTest"  
-    "gameOfLifeFusedScaleOutTest"  
-    "gameOfLifeGraphScaleOutTest"
-    "SBMScaleOutTest"
-    "SBMFusedScaleOutTest"
-    "SBMGraphScaleOutTest"
-    "ERMScaleOutTest"
-    "ERMFusedScaleOutTest"
-    "ERMGraphScaleOutTest"
+WORKLOADS=(
+    "gameOfLife"  
+    "stockMarket"
+    "SBM"
+    "ERM"
 )
+
+CATEGORIES=(
+    "Unopt"
+    "FusionNoLocalMessage"
+    "FusionOnly"
+    "FusionWithRemoteMessage"
+    "Fused"
+)
+
+# EXPERIMENTS=(
+#     "gameOfLifeFusionOnlyScaleOutTest"
+#     "stockMarketAggregateFusionOnlyScaleOutTest"
+#     "stockMarketFusionNoLocalMessageScaleOutTest"
+#     "stockMarketFusionWithRemoteMessageScaleOutTest"
+#     # "stockMarketFusedAggregateScaleOutTest"
+#     # "stockMarketGraphScaleOutTest"
+#     # "gameOfLifeScaleOutTest"  
+#     # "gameOfLifeFusedScaleOutTest"  
+#     # "gameOfLifeGraphScaleOutTest"
+# #     "SBMScaleOutTest"
+# #     "SBMFusedScaleOutTest"
+# #     "SBMGraphScaleOutTest"
+# #     "ERMScaleOutTest"
+# #     "ERMFusedScaleOutTest"
+# #     "ERMGraphScaleOutTest"
+# )
 
 stopWorkers(){
     for worker in "${WORKERS[@]}"; do
